@@ -2,6 +2,7 @@ package stalecucumber
 
 import "strconv"
 import "fmt"
+import "math/big"
 
 /**
 Opcode: INT
@@ -71,7 +72,26 @@ Stack before: []
 Stack after: [long]
 **/
 func (pm *PickleMachine) opcode_LONG() error {
-	return ErrOpcodeNotImplemented
+	i := new(big.Int)
+	str, err := pm.readString()
+	if err != nil {
+		return err
+	}
+	if len(str) == 0 {
+		return fmt.Errorf("String for LONG opcode cannot be zero length")
+	}
+
+	last := str[len(str)-1]
+	if last != 'L' {
+		return fmt.Errorf("String for LONG opcode must end with %q not %q", "L", last)
+	}
+	v := str[:len(str)-1]
+	_, err = fmt.Sscan(v, i)
+	if err != nil {
+		return err
+	}
+	pm.push(i)
+	return nil
 }
 
 /**
@@ -113,7 +133,8 @@ Stack before: []
 Stack after: [None]
 **/
 func (pm *PickleMachine) opcode_NONE() error {
-	return ErrOpcodeNotImplemented
+	pm.push(PickleNone{})
+	return nil
 }
 
 /**
@@ -150,7 +171,17 @@ Stack before: []
 Stack after: [float]
 **/
 func (pm *PickleMachine) opcode_FLOAT() error {
-	return ErrOpcodeNotImplemented
+	str, err := pm.readString()
+	if err != nil {
+		return err
+	}
+	var v float64
+	_, err = fmt.Sscanf(str, "%f", &v)
+	if err != nil {
+		return err
+	}
+	pm.push(v)
+	return nil
 }
 
 /**
@@ -166,7 +197,23 @@ Stack before: [list, any]
 Stack after: [list]
 **/
 func (pm *PickleMachine) opcode_APPEND() error {
-	return ErrOpcodeNotImplemented
+	v, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	listI, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	list, ok := listI.([]interface{})
+	if !ok {
+		fmt.Errorf("Second item on top of stack must be of %T not %T", list, listI)
+	}
+	list = append(list, v)
+	pm.push(list)
+	return nil
 }
 
 /**
@@ -184,7 +231,23 @@ Stack before: [mark, stackslice]
 Stack after: [list]
 **/
 func (pm *PickleMachine) opcode_LIST() error {
-	return ErrOpcodeNotImplemented
+	markIndex, err := pm.findMark()
+	if err != nil {
+		return err
+	}
+	v := make([]interface{}, 0)
+	for i := markIndex + 1; i != len(pm.Stack); i++ {
+		v = append(v, pm.Stack[i])
+	}
+
+	//Pop the values off the stack
+	err = pm.popAfterIndex(markIndex)
+	if err != nil {
+		return err
+	}
+
+	pm.push(v)
+	return nil
 }
 
 /**
@@ -202,7 +265,7 @@ Stack before: [mark, stackslice]
 Stack after: [tuple]
 **/
 func (pm *PickleMachine) opcode_TUPLE() error {
-	return ErrOpcodeNotImplemented
+	return pm.opcode_LIST()
 }
 
 /**
@@ -221,7 +284,30 @@ Stack before: [mark, stackslice]
 Stack after: [dict]
 **/
 func (pm *PickleMachine) opcode_DICT() error {
-	return ErrOpcodeNotImplemented
+	markIndex, err := pm.findMark()
+	if err != nil {
+		return err
+	}
+
+	v := make(map[interface{}]interface{})
+	var key interface{}
+	for i := markIndex + 1; i != len(pm.Stack); i++ {
+		if key == nil {
+			key = pm.Stack[i]
+		} else {
+			v[key] = pm.Stack[i]
+			key = nil
+		}
+	}
+	if key != nil {
+		return fmt.Errorf("For opcode DICT stack after mark contained an odd number of items, this is not valid")
+	}
+	err = pm.popAfterIndex(markIndex)
+	if err != nil {
+		return err
+	}
+	pm.push(v)
+	return nil
 }
 
 /**
@@ -237,7 +323,30 @@ Stack before: [dict, any, any]
 Stack after: [dict]
 **/
 func (pm *PickleMachine) opcode_SETITEM() error {
-	return ErrOpcodeNotImplemented
+	v, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	k, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	dictI, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	dict, ok := dictI.(map[interface{}]interface{})
+	if !ok {
+		return fmt.Errorf("For opcode SETITEM stack item 2 from top must be of type %T not %T", dict, dictI)
+	}
+
+	dict[k] = v
+	pm.push(dict)
+
+	return nil
 }
 
 /**
@@ -247,7 +356,9 @@ Stack before: [any]
 Stack after: []
 **/
 func (pm *PickleMachine) opcode_POP() error {
-	return ErrOpcodeNotImplemented
+	_, err := pm.pop()
+	return err
+
 }
 
 /**
@@ -272,7 +383,8 @@ Stack before: []
 Stack after: [mark]
 **/
 func (pm *PickleMachine) opcode_MARK() error {
-	return ErrOpcodeNotImplemented
+	pm.push(PickleMark{})
+	return nil
 }
 
 /**
@@ -335,6 +447,7 @@ Stack before: []
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_GLOBAL() error {
+	//TODO push an object that represents the result of this operation
 	return ErrOpcodeNotImplemented
 }
 
@@ -366,6 +479,7 @@ Stack before: [any, any]
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_REDUCE() error {
+	//TODO push an object that represents the result result of this operation
 	return ErrOpcodeNotImplemented
 }
 

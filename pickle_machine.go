@@ -5,12 +5,14 @@ import "io"
 import "bytes"
 import "encoding/binary"
 import "fmt"
+import "math/big"
 
 var ErrOpcodeStopped = errors.New("STOP opcode found")
 var ErrStackTooSmall = errors.New("Stack is too small to perform requested operation")
 var ErrInputTruncated = errors.New("Input to the pickle machine was truncated")
 var ErrOpcodeNotImplemented = errors.New("Input encountered opcode that is not implemented")
 var ErrNoResult = errors.New("Input did not place a value onto the stack")
+var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
 func Unmarshal(reader io.Reader, dest interface{}) error {
 	var pm PickleMachine
@@ -43,7 +45,31 @@ func Unmarshal(reader io.Reader, dest interface{}) error {
 			*dest = vs
 			return nil
 		}
+	case **big.Int:
+		if vbi, ok := v.(*big.Int); ok {
+			*dest = vbi
+			return nil
+		}
+	case *float64:
+		if vf, ok := v.(float64); ok {
+			*dest = vf
+			return nil
+		}
+	case *[]interface{}:
+		if vsi, ok := v.([]interface{}); ok {
+			*dest = vsi
+			return nil
+		}
+	case *map[interface{}]interface{}:
+		if vsm, ok := v.(map[interface{}]interface{}); ok {
+			*dest = vsm
+			return nil
+		}
 	}
+
+	//TODO handle the case of v.(PickleMark{})
+	//& dest is a pointer type. Just set equal to nil
+	//and return
 
 	return fmt.Errorf("Cannot unmarshal object of type %T into destination of type %T", v, dest)
 
@@ -54,6 +80,9 @@ var jumpList = buildEmptyJumpList()
 func init() {
 	populateJumpList(&jumpList)
 }
+
+type PickleMark struct{}
+type PickleNone struct{}
 
 type PickleMachine struct {
 	Stack  []interface{}
@@ -72,6 +101,8 @@ func (pm *PickleMachine) execute() error {
 		err = jumpList[int(opcode)](pm)
 		if err == ErrOpcodeStopped {
 			return nil
+		} else if err == ErrOpcodeNotImplemented {
+			return fmt.Errorf("Opcode 0x%X not impleneted", opcode)
 		} else if err != nil {
 			return err
 		}
@@ -82,8 +113,25 @@ func (pm *PickleMachine) push(v interface{}) {
 	pm.Stack = append(pm.Stack, v)
 }
 
-func (pm *PickleMachine) pop() error {
-	return ErrStackTooSmall
+func (pm *PickleMachine) pop() (interface{}, error) {
+	if len(pm.Stack) == 0 {
+		return nil, ErrStackTooSmall
+	}
+
+	lastIndex := len(pm.Stack) - 1
+	top := pm.Stack[lastIndex]
+
+	pm.Stack = pm.Stack[:lastIndex]
+	return top, nil
+}
+
+func (pm *PickleMachine) popAfterIndex(index int) error {
+	if len(pm.Stack)-1 < index {
+		return ErrStackTooSmall
+	}
+
+	pm.Stack = pm.Stack[0:index]
+	return nil
 }
 
 func (pm *PickleMachine) putMemo(index int, v interface{}) {
@@ -92,6 +140,15 @@ func (pm *PickleMachine) putMemo(index int, v interface{}) {
 	}
 
 	pm.Memo[index] = v
+}
+
+func (pm *PickleMachine) findMark() (int, error) {
+	for i := len(pm.Stack) - 1; i != -1; i-- {
+		if _, ok := pm.Stack[i].(PickleMark); ok {
+			return i, nil
+		}
+	}
+	return -1, ErrMarkNotFound
 }
 
 func (pm *PickleMachine) readString() (string, error) {
