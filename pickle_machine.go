@@ -122,7 +122,7 @@ func (pm *PickleMachine) execute() error {
 		if err == ErrOpcodeStopped {
 			return nil
 		} else if err == ErrOpcodeNotImplemented {
-			return fmt.Errorf("Opcode 0x%X not implemented", opcode)
+			return pm.error(ErrOpcodeNotImplemented)
 		} else if err != nil {
 			return pm.error(err)
 		}
