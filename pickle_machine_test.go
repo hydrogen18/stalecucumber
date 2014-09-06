@@ -44,18 +44,11 @@ func TestProtocol0Bool(t *testing.T) {
 }
 
 func TestProtocol0String(t *testing.T) {
-	var result string
-	reader := strings.NewReader("S'foobar'\np0\n.")
-	const EXPECT = "foobar"
-
-	err := Unmarshal(reader, &result)
-	if err != nil {
-		t.Fatalf("Got error %v", err)
-	}
-
-	if result != EXPECT {
-		t.Fatalf("Got value %q expected %q", result, EXPECT)
-	}
+	testString(t, "S'foobar'\np0\n.", "foobar")
+	testString(t, "S'String with embedded\\nnewline.'\np0\n.", "String with embedded\nnewline.")
+	testString(t,
+		"\x53\x27\x53\x74\x72\x69\x6e\x67\x20\x77\x69\x74\x68\x20\x65\x6d\x62\x65\x64\x64\x65\x64\x5c\x6e\x6e\x65\x77\x6c\x69\x6e\x65\x20\x61\x6e\x64\x20\x65\x6d\x62\x65\x64\x64\x65\x64\x20\x71\x75\x6f\x74\x65\x20\x5c\x27\x20\x61\x6e\x64\x20\x65\x6d\x62\x65\x64\x64\x65\x64\x20\x64\x6f\x75\x62\x6c\x65\x71\x75\x6f\x74\x65\x20\x22\x2e\x27\x0a\x70\x30\x0a\x2e",
+		"String with embedded\nnewline and embedded quote ' and embedded doublequote \".")
 }
 
 func TestProtocol0Long(t *testing.T) {
@@ -233,6 +226,7 @@ func testString(t *testing.T, input string, expect string) {
 	if result != expect {
 		t.Fatalf("Got %q(%T) expected %q(%T)", result, result, expect, expect)
 	}
+
 }
 
 func TestProtocol1String(t *testing.T) {
@@ -290,4 +284,16 @@ func TestProtocol1PopMark(t *testing.T) {
 	if EXPECT != result {
 		t.Fatalf("Got %d expected %d", result, EXPECT)
 	}
+}
+
+func TestProtocol1Unicode(t *testing.T) {
+	expect := "This is a slash \\. This is a newline \n. This is a character that is two embedded newlines: \u0a0a. This is a snowman: \u2603."
+
+	if len([]rune(expect)) != 115 {
+		t.Errorf("Expect shouldn't be :%v", expect)
+		t.Fatalf("you messed up the escape sequence on the expecation, again. Length is %d", len(expect))
+	}
+	testString(t, "\x56\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x73\x6c\x61\x73\x68\x20\x5c\x75\x30\x30\x35\x63\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x6e\x65\x77\x6c\x69\x6e\x65\x20\x5c\x75\x30\x30\x30\x61\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x63\x68\x61\x72\x61\x63\x74\x65\x72\x20\x74\x68\x61\x74\x20\x69\x73\x20\x74\x77\x6f\x20\x65\x6d\x62\x65\x64\x64\x65\x64\x20\x6e\x65\x77\x6c\x69\x6e\x65\x73\x3a\x20\x5c\x75\x30\x61\x30\x61\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x73\x6e\x6f\x77\x6d\x61\x6e\x3a\x20\x5c\x75\x32\x36\x30\x33\x2e\x0a\x70\x30\x0a\x2e",
+		expect)
+
 }

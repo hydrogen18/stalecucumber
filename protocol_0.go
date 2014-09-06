@@ -105,6 +105,9 @@ Push a Python string object.
 Stack before: []
 Stack after: [str]
 **/
+
+var unquoteInputs = []byte{0x0, 0x27, 0x22}
+
 func (pm *PickleMachine) opcode_STRING() error {
 	str, err := pm.readString()
 	if err != nil {
@@ -121,8 +124,30 @@ func (pm *PickleMachine) opcode_STRING() error {
 		return fmt.Errorf("For STRING opcode, argument has poorly formed value %q", str)
 	}
 
-	pm.push(str[1 : len(str)-1])
+	v := str[1 : len(str)-1]
 
+	f := make([]rune, 0, len(v))
+
+	for len(v) != 0 {
+		var vr rune
+		var replacement string
+		for _, i := range unquoteInputs {
+			vr, _, replacement, err = strconv.UnquoteChar(v, i)
+			if err == nil {
+				break
+			}
+		}
+
+		if err != nil {
+			c := v[0]
+			return fmt.Errorf("Read thus far %q. Failed to unquote character %c error:%v", string(f), c, err)
+		}
+		v = replacement
+
+		f = append(f, vr)
+	}
+
+	pm.push(string(f))
 	return nil
 }
 
@@ -149,7 +174,36 @@ Stack before: []
 Stack after: [unicode]
 **/
 func (pm *PickleMachine) opcode_UNICODE() error {
-	return ErrOpcodeNotImplemented
+	str, err := pm.readString()
+	if err != nil {
+		return err
+	}
+
+	v := str
+
+	f := make([]rune, 0, len(v))
+
+	for len(v) != 0 {
+		var vr rune
+		var replacement string
+		for _, i := range unquoteInputs {
+			vr, _, replacement, err = strconv.UnquoteChar(v, i)
+			if err == nil {
+				break
+			}
+		}
+
+		if err != nil {
+			c := v[0]
+			return fmt.Errorf("Read thus far %q. Failed to unquote character %c error:%v", string(f), c, err)
+		}
+		v = replacement
+
+		f = append(f, vr)
+	}
+
+	pm.push(string(f))
+	return nil
 }
 
 /**
