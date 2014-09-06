@@ -3,6 +3,7 @@ package stalecucumber
 import "testing"
 import "strings"
 import "math/big"
+import "reflect"
 
 func TestProtocol0Integer(t *testing.T) {
 	var result int64
@@ -85,12 +86,10 @@ func TestProtocol0Float(t *testing.T) {
 		t.Fatalf("Got value %q expected %q", result, EXPECT)
 	}
 }
-func TestProtocol0Dict(t *testing.T) {
-	reader := strings.NewReader("(dp0\nS'a'\np1\nI1\nsS'b'\np2\nI5\ns.")
+
+func testDict(t *testing.T, input string, expect map[interface{}]interface{}) {
+	reader := strings.NewReader(input)
 	var result map[interface{}]interface{}
-	expect := make(map[string]int64)
-	expect["a"] = 1
-	expect["b"] = 5
 
 	err := Unmarshal(reader, &result)
 	if err != nil {
@@ -101,27 +100,45 @@ func TestProtocol0Dict(t *testing.T) {
 	}
 
 	for k, v := range result {
+		var expectedV interface{}
 
-		var expectedV int64
-		if kstr, ok := k.(string); ok {
-			expectedV, ok = expect[kstr]
-			if !ok {
-				t.Errorf("key %q not found in expectation", kstr)
-				continue
-			}
-		} else {
-			t.Errorf("key %v has unexpected type %T, not %T", k, k, kstr)
+		expectedV, ok := expect[k]
+		if !ok {
+			t.Errorf("Result has key %v(%T) which is not in expectation", k, k)
 			continue
 		}
 
-		if vint, ok := v.(int64); ok {
-			if vint != expectedV {
-				t.Errorf("result[%q] has unexpected value %d not %d", k, vint, expectedV)
-			}
-		} else {
-			t.Errorf("result[%q] has unexpected type %T not %T", k, v, expectedV)
+		if reflect.TypeOf(v) != reflect.TypeOf(expectedV) {
+			t.Errorf("At key %v result has type %T where expectation has type %T", k, v, expectedV)
+			continue
 		}
+
+		if !reflect.DeepEqual(expectedV, v) {
+			t.Errorf("At key %v result %v != expectation %v", k, v, expectedV)
+		}
+
 	}
+}
+
+func TestProtocol0Dict(t *testing.T) {
+
+	{
+		input := "(dp0\nS'a'\np1\nI1\nsS'b'\np2\nI5\ns."
+		expect := make(map[interface{}]interface{})
+		expect["a"] = int64(1)
+		expect["b"] = int64(5)
+		testDict(t, input, expect)
+	}
+
+	{
+		expect := make(map[interface{}]interface{})
+		expect["foo"] = "bar"
+		expect[int64(5)] = "kitty"
+		expect["num"] = 13.37
+		expect["list"] = []interface{}{int64(1), int64(2), int64(3), int64(4)}
+		testDict(t, "(dp0\nS'list'\np1\n(lp2\nI1\naI2\naI3\naI4\nasS'foo'\np3\nS'bar'\np4\nsS'num'\np5\nF13.37\nsI5\nS'kitty'\np6\ns.", expect)
+	}
+
 }
 
 func testList(t *testing.T, input string, expect []int64) {
@@ -159,6 +176,15 @@ func TestProtocol1List(t *testing.T) {
 	testList(t, "]q\x00.", []int64{})
 	testList(t, "]q\x00(M9\x05M9\x05M9\x05e.", []int64{1337, 1337, 1337})
 	testList(t, "]q\x00(M9\x05I3735928559\nM\xb1\"e.", []int64{1337, 0xdeadbeef, 8881})
+}
+
+func TestProtocol1Tuple(t *testing.T) {
+	testList(t, ").", []int64{})
+	testList(t, "(K*K\x18K*K\x1cKRK\x1ctq\x00.", []int64{42, 24, 42, 28, 82, 28})
+}
+
+func TestProtocol1Dict(t *testing.T) {
+
 }
 
 func testInt(t *testing.T, input string, expect int64) {

@@ -225,7 +225,7 @@ Stack before: []
 Stack after: [tuple]
 **/
 func (pm *PickleMachine) opcode_EMPTY_TUPLE() error {
-	return ErrOpcodeNotImplemented
+	return pm.opcode_EMPTY_LIST()
 }
 
 /**
