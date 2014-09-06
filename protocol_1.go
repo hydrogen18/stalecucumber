@@ -235,7 +235,8 @@ Stack before: []
 Stack after: [dict]
 **/
 func (pm *PickleMachine) opcode_EMPTY_DICT() error {
-	return ErrOpcodeNotImplemented
+	pm.push(make(map[interface{}]interface{}))
+	return nil
 }
 
 /**
@@ -258,7 +259,41 @@ Stack before: [dict, mark, stackslice]
 Stack after: [dict]
 **/
 func (pm *PickleMachine) opcode_SETITEMS() error {
-	return ErrOpcodeNotImplemented
+	markIndex, err := pm.findMark()
+	if err != nil {
+		return err
+	}
+
+	vI, err := pm.readFromStackAt(markIndex - 1)
+	if err != nil {
+		return err
+	}
+
+	v, ok := vI.(map[interface{}]interface{})
+	if !ok {
+		return fmt.Errorf("Opcode DICT expected type %T on stack but found %v(%T)", v, vI, vI)
+	}
+
+	var key interface{}
+	for i := markIndex + 1; i != len(pm.Stack); i++ {
+		if key == nil {
+			key = pm.Stack[i]
+		} else {
+			v[key] = pm.Stack[i]
+			key = nil
+		}
+	}
+
+	if key != nil {
+		return fmt.Errorf("For opcode DICT stack after mark contained an odd number of items, this is not valid")
+	}
+
+	err = pm.popAfterIndex(markIndex)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 /**

@@ -149,6 +149,20 @@ func TestProtocol0Dict(t *testing.T) {
 
 }
 
+func TestProtocol1Dict(t *testing.T) {
+	testDict(t, "}q\x00.", make(map[interface{}]interface{}))
+	{
+		expect := make(map[interface{}]interface{})
+		expect["foo"] = "bar"
+		expect["meow"] = "bar"
+		expect[int64(5)] = "kitty"
+		expect["num"] = 13.37
+		expect["list"] = []interface{}{int64(1), int64(2), int64(3), int64(4)}
+		input := "}q\x00(U\x04meowq\x01U\x03barq\x02U\x04listq\x03]q\x04(K\x01K\x02K\x03K\x04eU\x03fooq\x05h\x02U\x03numq\x06G@*\xbdp\xa3\xd7\n=K\x05U\x05kittyq\x07u."
+		testDict(t, input, expect)
+	}
+}
+
 func testList(t *testing.T, input string, expect []interface{}) {
 	var result []interface{}
 	reader := strings.NewReader(input)
@@ -184,10 +198,6 @@ func TestProtocol1List(t *testing.T) {
 func TestProtocol1Tuple(t *testing.T) {
 	testList(t, ").", []interface{}{})
 	testList(t, "(K*K\x18K*K\x1cKRK\x1ctq\x00.", []interface{}{int64(42), int64(24), int64(42), int64(28), int64(82), int64(28)})
-}
-
-func TestProtocol1Dict(t *testing.T) {
-
 }
 
 func testInt(t *testing.T, input string, expect int64) {
