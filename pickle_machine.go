@@ -81,9 +81,6 @@ func init() {
 	populateJumpList(&jumpList)
 }
 
-type PickleMark struct{}
-type PickleNone struct{}
-
 type PickleMachine struct {
 	Stack  []interface{}
 	Memo   []interface{}
