@@ -120,6 +120,10 @@ func testDict(t *testing.T, input string, expect map[interface{}]interface{}) {
 	}
 }
 
+func TestProtocol0Get(t *testing.T) {
+
+}
+
 func TestProtocol0Dict(t *testing.T) {
 
 	{
@@ -141,7 +145,7 @@ func TestProtocol0Dict(t *testing.T) {
 
 }
 
-func testList(t *testing.T, input string, expect []int64) {
+func testList(t *testing.T, input string, expect []interface{}) {
 	var result []interface{}
 	reader := strings.NewReader(input)
 
@@ -153,34 +157,29 @@ func testList(t *testing.T, input string, expect []int64) {
 		t.Errorf("Result has wrong length %d", len(result))
 	}
 	for i, v := range result {
-		var vi int64
-		var ok bool
-		vi, ok = v.(int64)
-		if !ok {
-			t.Errorf("result[%d]=%v not type %T", i, v, vi)
-			continue
-		}
 
-		if vi != expect[i] {
-			t.Errorf("result[%d] != expect[%d]", i, i)
+		vexpect := expect[i]
+
+		if !reflect.DeepEqual(v, vexpect) {
+			t.Errorf("result[%v(%T)] != expect[%v(%T)]", i, v, i, vexpect)
 		}
 	}
 
 }
 
 func TestProtocol0List(t *testing.T) {
-	testList(t, "(lp0\nI1\naI2\naI3\na.", []int64{1, 2, 3})
+	testList(t, "(lp0\nI1\naI2\naI3\na.", []interface{}{int64(1), int64(2), int64(3)})
 }
 
 func TestProtocol1List(t *testing.T) {
-	testList(t, "]q\x00.", []int64{})
-	testList(t, "]q\x00(M9\x05M9\x05M9\x05e.", []int64{1337, 1337, 1337})
-	testList(t, "]q\x00(M9\x05I3735928559\nM\xb1\"e.", []int64{1337, 0xdeadbeef, 8881})
+	testList(t, "]q\x00.", []interface{}{})
+	testList(t, "]q\x00(M9\x05M9\x05M9\x05e.", []interface{}{int64(1337), int64(1337), int64(1337)})
+	testList(t, "]q\x00(M9\x05I3735928559\nM\xb1\"e.", []interface{}{int64(1337), int64(0xdeadbeef), int64(8881)})
 }
 
 func TestProtocol1Tuple(t *testing.T) {
-	testList(t, ").", []int64{})
-	testList(t, "(K*K\x18K*K\x1cKRK\x1ctq\x00.", []int64{42, 24, 42, 28, 82, 28})
+	testList(t, ").", []interface{}{})
+	testList(t, "(K*K\x18K*K\x1cKRK\x1ctq\x00.", []interface{}{int64(42), int64(24), int64(42), int64(28), int64(82), int64(28)})
 }
 
 func TestProtocol1Dict(t *testing.T) {
