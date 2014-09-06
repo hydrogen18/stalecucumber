@@ -1,5 +1,6 @@
 import versions
 from io import open
+import itertools
 
 pkg_stmt = u'package stalecucumber\n\n'
 
@@ -32,7 +33,7 @@ with open('populate_jump_list.go','w') as fout:
 	fout.write(pkg_stmt)
 
 	fout.write(u'func populateJumpList(jl *OpcodeJumpList) {\n')
-	for opcode in versions.v0:
+	for opcode in itertools.chain(versions.v0,versions.v1):
 		fout.write(u"jl[0x%X] = (*PickleMachine).%s\n" % (ord(opcode.code),make_name(opcode.name)))
 	fout.write(u"}\n\n")
 

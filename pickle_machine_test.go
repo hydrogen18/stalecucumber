@@ -123,10 +123,11 @@ func TestProtocol0Dict(t *testing.T) {
 		}
 	}
 }
-func TestProtocol0List(t *testing.T) {
+
+func testList(t *testing.T, input string, expect []int64) {
 	var result []interface{}
-	reader := strings.NewReader("(lp0\nI1\naI2\naI3\na.")
-	expect := []int64{1, 2, 3}
+	reader := strings.NewReader(input)
+
 	err := Unmarshal(reader, &result)
 	if err != nil {
 		t.Fatalf("Got error %v", err)
@@ -146,5 +147,75 @@ func TestProtocol0List(t *testing.T) {
 		if vi != expect[i] {
 			t.Errorf("result[%d] != expect[%d]", i, i)
 		}
+	}
+
+}
+
+func TestProtocol0List(t *testing.T) {
+	testList(t, "(lp0\nI1\naI2\naI3\na.", []int64{1, 2, 3})
+}
+
+func TestProtocol1List(t *testing.T) {
+	testList(t, "]q\x00.", []int64{})
+	testList(t, "]q\x00(M9\x05M9\x05M9\x05e.", []int64{1337, 1337, 1337})
+	testList(t, "]q\x00(M9\x05I3735928559\nM\xb1\"e.", []int64{1337, 0xdeadbeef, 8881})
+}
+
+func testInt(t *testing.T, input string, expect int64) {
+	var result int64
+	reader := strings.NewReader(input)
+
+	err := Unmarshal(reader, &result)
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+	if result != expect {
+		t.Fatalf("Got %d(%T) expected %d(%T)", result, result, expect, expect)
+	}
+
+}
+
+func TestProtocol1Binint(t *testing.T) {
+	testInt(t, "J\xff\xff\xff\x00.", 0xffffff)
+	testInt(t, "K*.", 42)
+	testInt(t, "M\xff\xab.", 0xabff)
+}
+
+func testString(t *testing.T, input string, expect string) {
+	var result string
+	reader := strings.NewReader(input)
+
+	err := Unmarshal(reader, &result)
+
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if result != expect {
+		t.Fatalf("Got %q(%T) expected %q(%T)", result, result, expect, expect)
+	}
+}
+
+func TestProtocol1String(t *testing.T) {
+	testString(t,
+		"T\x04\x01\x00\x00abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZq\x00.",
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	testString(t, "U\x13queen of the castleq\x00.", "queen of the castle")
+}
+
+func TestProtocol1Float(t *testing.T) {
+	var result float64
+	reader := strings.NewReader("G?\xc1\x1d\x14\xe3\xbc\xd3[.")
+
+	err := Unmarshal(reader, &result)
+
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+	var expect float64
+	expect = 0.1337
+	if result != expect {
+		t.Fatalf("Got %f expected %f", result, expect)
 	}
 }
