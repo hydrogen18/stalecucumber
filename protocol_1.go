@@ -366,7 +366,18 @@ Stack before: []
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_LONG_BINGET() error {
-	return ErrOpcodeNotImplemented
+	var index int32
+	err := pm.readBinaryInto(&index, false)
+	if err != nil {
+		return err
+	}
+
+	v, err := pm.readFromMemo(int64(index))
+	if err != nil {
+		return err
+	}
+	pm.push(v)
+	return nil
 }
 
 /**
@@ -407,7 +418,21 @@ Stack before: []
 Stack after: []
 **/
 func (pm *PickleMachine) opcode_LONG_BINPUT() error {
-	return ErrOpcodeNotImplemented
+	var index int32
+	err := pm.readBinaryInto(&index, false)
+	if err != nil {
+		return err
+	}
+
+	v, err := pm.readFromStack(0)
+	if err != nil {
+		return err
+	}
+	err = pm.storeMemo(int64(index), v)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /**
