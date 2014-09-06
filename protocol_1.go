@@ -287,7 +287,20 @@ Stack before: []
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_BINGET() error {
-	return ErrOpcodeNotImplemented
+	var index uint8
+	err := pm.readBinaryInto(&index, false)
+	if err != nil {
+		return err
+	}
+
+	v, err := pm.readFromMemo(int64(index))
+	if err != nil {
+		return err
+	}
+
+	pm.push(v)
+
+	return nil
 }
 
 /**

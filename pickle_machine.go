@@ -145,6 +145,14 @@ func (pm *PickleMachine) storeMemo(index int64, v interface{}) error {
 	return nil
 }
 
+func (pm *PickleMachine) readFromMemo(index int64) (interface{}, error) {
+	if index < 0 || index >= int64(len(pm.Memo)) {
+		return nil, fmt.Errorf("Requested to read from invalid memo index %d", index)
+	}
+
+	return pm.Memo[index], nil
+}
+
 func (pm *PickleMachine) push(v interface{}) {
 	pm.Stack = append(pm.Stack, v)
 }

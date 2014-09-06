@@ -409,11 +409,12 @@ func (pm *PickleMachine) opcode_GET() error {
 		return err
 	}
 
-	if index >= len(pm.Memo) || index < 0 {
-		return fmt.Errorf("GET attempted to read from invalid memo location %d", index)
+	v, err := pm.readFromMemo(int64(index))
+	if err != nil {
+		return err
 	}
 
-	pm.push(pm.Memo[index])
+	pm.push(v)
 	return nil
 }
 

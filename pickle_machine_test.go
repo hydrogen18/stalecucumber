@@ -124,6 +124,10 @@ func TestProtocol0Get(t *testing.T) {
 	testList(t, "(lp0\nS'hydrogen18'\np1\nag1\na.", []interface{}{"hydrogen18", "hydrogen18"})
 }
 
+func TestProtocol1Get(t *testing.T) {
+	testList(t, "]q\x00(U\nhydrogen18q\x01h\x01e.", []interface{}{"hydrogen18", "hydrogen18"})
+}
+
 func TestProtocol0Dict(t *testing.T) {
 
 	{
