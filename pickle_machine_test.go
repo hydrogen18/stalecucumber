@@ -258,3 +258,36 @@ func TestProtocol1Float(t *testing.T) {
 		t.Fatalf("Got %f expected %f", result, expect)
 	}
 }
+
+func TestProtocol1PopMark(t *testing.T) {
+	var result int64
+	/**
+		This exapmle is ultra-contrived. I could not get anything to
+		produce usage of POP_MARK using protocol 1. There are some
+		comments in Lib/pickle.py about a recursive tuple generating
+		this but I have no idea how that is even possible.
+
+		The disassembly of this looks like
+	    0: K    BININT1    1
+	    2: (    MARK
+	    3: K        BININT1    2
+	    5: K        BININT1    3
+	    7: 1        POP_MARK   (MARK at 2)
+	    8: .    STOP
+
+		There is just a mark placed on the stack with some numbers
+		afterwards solely to test the correct behavior
+		of the POP_MARK instruction.
+
+		**/
+	reader := strings.NewReader("K\x01(K\x02K\x031.")
+	err := Unmarshal(reader, &result)
+	const EXPECT = 1
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if EXPECT != result {
+		t.Fatalf("Got %d expected %d", result, EXPECT)
+	}
+}

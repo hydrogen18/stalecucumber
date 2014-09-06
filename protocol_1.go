@@ -308,7 +308,12 @@ Stack before: [mark, stackslice]
 Stack after: []
 **/
 func (pm *PickleMachine) opcode_POP_MARK() error {
-	return ErrOpcodeNotImplemented
+	markIndex, err := pm.findMark()
+	if err != nil {
+		return nil
+	}
+	err = pm.popAfterIndex(markIndex)
+	return err
 }
 
 /**
