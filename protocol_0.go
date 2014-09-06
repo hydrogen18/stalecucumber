@@ -468,6 +468,8 @@ func (pm *PickleMachine) opcode_GET() error {
 		return err
 	}
 
+	//TODO test if the object we are about to push is mutable
+	//if so it needs to be somehow deep copied first
 	pm.push(v)
 	return nil
 }
