@@ -44,6 +44,7 @@ func TestProtocol0Bool(t *testing.T) {
 }
 
 func TestProtocol0String(t *testing.T) {
+	testString(t, "S''\np0\n.", "")
 	testString(t, "S'foobar'\np0\n.", "foobar")
 	testString(t, "S'String with embedded\\nnewline.'\np0\n.", "String with embedded\nnewline.")
 	testString(t,
@@ -230,6 +231,7 @@ func testString(t *testing.T, input string, expect string) {
 }
 
 func TestProtocol1String(t *testing.T) {
+	testString(t, "U\x00q\x00.", "")
 	testString(t,
 		"T\x04\x01\x00\x00abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZq\x00.",
 		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -287,6 +289,24 @@ func TestProtocol1PopMark(t *testing.T) {
 }
 
 func TestProtocol1Unicode(t *testing.T) {
+	testString(t, "X\x00\x00\x00\x00q\x00.", "")
+
+	expect := "This is a slash \\. This is a newline \n. This is a character that is two embedded newlines: \u0a0a. This is a snowman: \u2603."
+
+	if len([]rune(expect)) != 115 {
+		t.Errorf("Expect shouldn't be :%v", expect)
+		t.Fatalf("you messed up the escape sequence on the expecation, again. Length is %d", len(expect))
+	}
+
+	testString(t, "\x58\x77\x00\x00\x00\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x73\x6c\x61\x73\x68\x20\x5c\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x6e\x65\x77\x6c\x69\x6e\x65\x20\x0a\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x63\x68\x61\x72\x61\x63\x74\x65\x72\x20\x74\x68\x61\x74\x20\x69\x73\x20\x74\x77\x6f\x20\x65\x6d\x62\x65\x64\x64\x65\x64\x20\x6e\x65\x77\x6c\x69\x6e\x65\x73\x3a\x20\xe0\xa8\x8a\x2e\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x73\x6e\x6f\x77\x6d\x61\x6e\x3a\x20\xe2\x98\x83\x2e\x71\x00\x2e",
+		expect)
+
+}
+
+func TestProtocol0Unicode(t *testing.T) {
+
+	testString(t, "V\np0\n.", "")
+
 	expect := "This is a slash \\. This is a newline \n. This is a character that is two embedded newlines: \u0a0a. This is a snowman: \u2603."
 
 	if len([]rune(expect)) != 115 {

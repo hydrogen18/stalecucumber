@@ -139,7 +139,19 @@ Stack before: []
 Stack after: [unicode]
 **/
 func (pm *PickleMachine) opcode_BINUNICODE() error {
-	return ErrOpcodeNotImplemented
+	var l int32
+	err := pm.readBinaryInto(&l, false)
+	if err != nil {
+		return err
+	}
+
+	str, err := pm.readFixedLengthString(int64(l))
+	if err != nil {
+		return err
+	}
+
+	pm.push(str)
+	return nil
 }
 
 /**
