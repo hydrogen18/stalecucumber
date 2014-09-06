@@ -121,7 +121,7 @@ func testDict(t *testing.T, input string, expect map[interface{}]interface{}) {
 }
 
 func TestProtocol0Get(t *testing.T) {
-
+	testList(t, "(lp0\nS'hydrogen18'\np1\nag1\na.", []interface{}{"hydrogen18", "hydrogen18"})
 }
 
 func TestProtocol0Dict(t *testing.T) {

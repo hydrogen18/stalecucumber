@@ -399,7 +399,22 @@ Stack before: []
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_GET() error {
-	return ErrOpcodeNotImplemented
+	str, err := pm.readString()
+	if err != nil {
+		return err
+	}
+
+	index, err := strconv.Atoi(str)
+	if err != nil {
+		return err
+	}
+
+	if index >= len(pm.Memo) || index < 0 {
+		return fmt.Errorf("GET attempted to read from invalid memo location %d", index)
+	}
+
+	pm.push(pm.Memo[index])
+	return nil
 }
 
 /**
