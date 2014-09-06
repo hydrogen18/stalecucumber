@@ -42,5 +42,17 @@ jl[0x71] = (*PickleMachine).opcode_BINPUT
 jl[0x72] = (*PickleMachine).opcode_LONG_BINPUT
 jl[0x6F] = (*PickleMachine).opcode_OBJ
 jl[0x51] = (*PickleMachine).opcode_BINPERSID
+jl[0x8A] = (*PickleMachine).opcode_LONG1
+jl[0x8B] = (*PickleMachine).opcode_LONG4
+jl[0x88] = (*PickleMachine).opcode_NEWTRUE
+jl[0x89] = (*PickleMachine).opcode_NEWFALSE
+jl[0x85] = (*PickleMachine).opcode_TUPLE1
+jl[0x86] = (*PickleMachine).opcode_TUPLE2
+jl[0x87] = (*PickleMachine).opcode_TUPLE3
+jl[0x82] = (*PickleMachine).opcode_EXT1
+jl[0x83] = (*PickleMachine).opcode_EXT2
+jl[0x84] = (*PickleMachine).opcode_EXT4
+jl[0x81] = (*PickleMachine).opcode_NEWOBJ
+jl[0x80] = (*PickleMachine).opcode_PROTO
 }
 
