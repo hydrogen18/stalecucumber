@@ -43,32 +43,78 @@ func UnpackInto(dest interface{}) unpacker {
 }
 
 func (u unpacker) From(srcI interface{}, err error) error {
-	var src map[string]interface{}
-	src, err = DictString(srcI, err)
 	if err != nil {
 		return err
 	}
 
 	v := reflect.ValueOf(u.dest)
-
 	if v.Kind() != reflect.Ptr {
-		return UnpackingError{Source: src,
+		return UnpackingError{Source: srcI,
 			Destination: u.dest,
 			Err:         ErrNotPointer}
 	}
 
 	if v.IsNil() {
-		return UnpackingError{Source: src,
+		return UnpackingError{Source: srcI,
 			Destination: u.dest,
 			Err:         ErrNilPointer}
 
 	}
 
-	v = reflect.Indirect(v)
+	vIndirect := reflect.Indirect(v)
+	if srcList, ok := srcI.([]interface{}); ok {
+		if vIndirect.Kind() != reflect.Slice {
+			return UnpackingError{Source: srcI,
+				Destination: u.dest,
+				Err:         fmt.Errorf("Cannot unpack slice into destination")}
+		}
+
+		replacement := reflect.MakeSlice(vIndirect.Type(),
+			len(srcList), len(srcList))
+
+		for i, srcV := range srcList {
+			dstV := replacement.Index(i)
+
+			//Check if the slice element type is
+			//a pointer.
+			if dstV.Kind() != reflect.Ptr {
+				//If not a pointer, then indirect the
+				//value here
+				dstV = dstV.Addr()
+			} else {
+				//If it is a pointer, check for being nil.
+				//Allocate a structure if it is nil
+				if dstV.IsNil() {
+					dstV.Set(reflect.New(dstV.Type().Elem()))
+				}
+			}
+			err := unpacker{dest: dstV.Interface(),
+				AllowMissingFields:    u.AllowMissingFields,
+				AllowMismatchedFields: u.AllowMismatchedFields}.
+				From(srcV, nil)
+			if err != nil {
+				return err
+			}
+		}
+		vIndirect.Set(replacement)
+		return nil
+	}
+
+	v = vIndirect
+
+	var src map[string]interface{}
+	src, err = DictString(srcI, err)
+	if err != nil {
+		return UnpackingError{Source: srcI,
+			Destination: u.dest,
+			Err:         fmt.Errorf("Cannot unpack source into struct")}
+	}
+
 	if v.Kind() != reflect.Struct {
 		return UnpackingError{Source: src,
 			Destination: u.dest,
-			Err:         fmt.Errorf("Cannot unpickle into %v", v.Kind().String())}
+			Err:         fmt.Errorf("Cannot unpack into %v", v.Kind().String())}
+
 	}
 
 	for k, kv := range src {

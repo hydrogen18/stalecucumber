@@ -5,6 +5,80 @@ import "strings"
 import "reflect"
 import "math/big"
 
+func TestUnpackIntIntoStruct(t *testing.T) {
+	s := struct{}{}
+
+	err := UnpackInto(&s).From(Unpickle(strings.NewReader("\x80\x02K\x00.")))
+	if err == nil {
+		t.Fatal("Should have failed!")
+	}
+
+	upe, ok := err.(UnpackingError)
+	if !ok {
+		t.Fatalf("Should have failed with type %T but got %T:%v", upe, err, err)
+	}
+}
+
+const input0AsListOfDicts = "(lp0\n(dp1\nS'a'\np2\nL1L\nsS'c'\np3\nI3\nsS'b'\np4\nI2\nsa(dp5\ng2\nL1L\nsg3\nI3\nsg4\nI4\nsa(dp6\ng2\nL1L\nsg3\nI5\nsg4\nI2\nsa."
+
+func TestUnpackListOfDictsIntoSliceOfStructs(t *testing.T) {
+	dst := make([]testStruct, 0)
+	expect := make([]testStruct, 3)
+	expect[0] = testStruct{
+		A: 1,
+		B: 2,
+		C: 3,
+	}
+	expect[1] = testStruct{
+		A: 1,
+		B: 4,
+		C: 3,
+	}
+	expect[2] = testStruct{
+		A: 1,
+		B: 2,
+		C: 5,
+	}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input0AsListOfDicts)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
+}
+
+func TestUnpackListOfDictsIntoSliceOfPointersToStructs(t *testing.T) {
+	dst := make([]*testStruct, 0)
+	expect := make([]*testStruct, 3)
+	expect[0] = &testStruct{
+		A: 1,
+		B: 2,
+		C: 3,
+	}
+	expect[1] = &testStruct{
+		A: 1,
+		B: 4,
+		C: 3,
+	}
+	expect[2] = &testStruct{
+		A: 1,
+		B: 2,
+		C: 5,
+	}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input0AsListOfDicts)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
+}
+
 type testStruct struct {
 	A int64
 	B int64
