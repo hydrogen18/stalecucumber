@@ -53,7 +53,7 @@ Types conversion Python types to Go types is performed as followed
 	long -> big.Int from the "math/big" package
 	lists -> []interface{}
 	tuples -> []interface{}
-	dict -> []interface{}
+	dict -> map[interface{}]interface{}
 
 The following values are converted from Python to the Go types
 	True & False -> bool
