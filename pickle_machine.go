@@ -37,6 +37,10 @@ An error is returned if the underlying reader fails, the program
 is invalid, or unsupported opcodes are encountered. See below for the details
 of unsupported opcodes.
 
+If the version of python you are using supports protocol 2, you should always
+specify that protocol version. By default the "pickle" and "cPickle" modules
+in Python write using protocol 0. Protocol 0 requires much more space to
+represent the same values and is much slower to interpret.
 
 Type Conversions
 
@@ -192,7 +196,7 @@ It is envisioned that through a global negotiation and
 registration process, third parties can set up a mapping between
 ints and object names.
 
-These opcodes is unlikely to ever be supported by this package.
+These opcodes are unlikely to ever be supported by this package.
 
 */
 package stalecucumber
@@ -210,6 +214,17 @@ var ErrOpcodeNotImplemented = errors.New("Input encountered opcode that is not i
 var ErrNoResult = errors.New("Input did not place a value onto the stack")
 var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
+/*
+Unpickle a value from a reader. This function returns an error if
+the reader fails, the pickled data is invalid, or if the pickled data contains
+an unsupported opcode.
+
+See unsupported opcodes in the documentation of this package for more
+information.
+
+This function is generally not used directly, but with one of the helpers
+such as string.
+*/
 func Unpickle(reader io.Reader) (interface{}, error) {
 	var pm PickleMachine
 	pm.buf = &bytes.Buffer{}
@@ -234,6 +249,20 @@ func init() {
 	populateJumpList(&jumpList)
 }
 
+/*
+This type is returned whenever Unpickle encounters an error in pickled data.
+*/
+type PickleMachineError struct {
+	Err       error
+	StackSize int
+	MemoSize  int
+	Opcode    uint8
+}
+
+/*
+This struct is current exposed but not useful. It is likely to be hidden
+in the near future.
+*/
 type PickleMachine struct {
 	Stack  []interface{}
 	Memo   []interface{}
@@ -241,13 +270,6 @@ type PickleMachine struct {
 
 	currentOpcode uint8
 	buf           *bytes.Buffer
-}
-
-type PickleMachineError struct {
-	Err       error
-	StackSize int
-	MemoSize  int
-	Opcode    uint8
 }
 
 func (pme PickleMachineError) Error() string {
