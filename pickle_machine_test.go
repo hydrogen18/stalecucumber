@@ -6,10 +6,25 @@ import "math/big"
 import "reflect"
 import "fmt"
 
+func testString(t *testing.T, input string, expect string) {
+	reader := strings.NewReader(input)
+
+	result, err := String(Unpickle(reader))
+
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if result != expect {
+		t.Fatalf("Got %q(%T) expected %q(%T)", result, result, expect, expect)
+	}
+
+}
+
 func TestProtocol0Integer(t *testing.T) {
-	var result int64
+
 	reader := strings.NewReader("I42\n.")
-	err := Unmarshal(reader, &result)
+	result, err := Int(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -23,7 +38,7 @@ func TestProtocol0Bool(t *testing.T) {
 	var result bool
 
 	reader := strings.NewReader("I00\n.")
-	err := Unmarshal(reader, &result)
+	result, err := Bool(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -33,7 +48,7 @@ func TestProtocol0Bool(t *testing.T) {
 	}
 
 	reader = strings.NewReader("I01\n.")
-	err = Unmarshal(reader, &result)
+	result, err = Bool(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -66,10 +81,10 @@ func testBigIntFromString(t *testing.T, input string, expectStr string) {
 }
 
 func testBigInt(t *testing.T, input string, expect *big.Int) {
-	result := new(big.Int)
+
 	reader := strings.NewReader(input)
 
-	err := Unmarshal(reader, &result)
+	result, err := Big(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -85,11 +100,11 @@ func TestProtocol0Long(t *testing.T) {
 }
 
 func TestProtocol0Float(t *testing.T) {
-	var result float64
+
 	reader := strings.NewReader("F3.14\n.")
 	const EXPECT = 3.14
 
-	err := Unmarshal(reader, &result)
+	result, err := Float(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -101,9 +116,8 @@ func TestProtocol0Float(t *testing.T) {
 
 func testDict(t *testing.T, input string, expect map[interface{}]interface{}) {
 	reader := strings.NewReader(input)
-	var result map[interface{}]interface{}
 
-	err := Unmarshal(reader, &result)
+	result, err := Dict(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -193,10 +207,10 @@ func testListsEqual(t *testing.T, result []interface{}, expect []interface{}) {
 }
 
 func testList(t *testing.T, input string, expect []interface{}) {
-	var result []interface{}
+
 	reader := strings.NewReader(input)
 
-	err := Unmarshal(reader, &result)
+	result, err := ListOrTuple(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -221,10 +235,9 @@ func TestProtocol1Tuple(t *testing.T) {
 }
 
 func testInt(t *testing.T, input string, expect int64) {
-	var result int64
 	reader := strings.NewReader(input)
 
-	err := Unmarshal(reader, &result)
+	result, err := Int(Unpickle(reader))
 	if err != nil {
 		t.Fatalf("Got error %v", err)
 	}
@@ -240,22 +253,6 @@ func TestProtocol1Binint(t *testing.T) {
 	testInt(t, "M\xff\xab.", 0xabff)
 }
 
-func testString(t *testing.T, input string, expect string) {
-	var result string
-	reader := strings.NewReader(input)
-
-	err := Unmarshal(reader, &result)
-
-	if err != nil {
-		t.Fatalf("Got error %v", err)
-	}
-
-	if result != expect {
-		t.Fatalf("Got %q(%T) expected %q(%T)", result, result, expect, expect)
-	}
-
-}
-
 func TestProtocol1String(t *testing.T) {
 	testString(t, "U\x00q\x00.", "")
 	testString(t,
@@ -266,10 +263,10 @@ func TestProtocol1String(t *testing.T) {
 }
 
 func TestProtocol1Float(t *testing.T) {
-	var result float64
+
 	reader := strings.NewReader("G?\xc1\x1d\x14\xe3\xbc\xd3[.")
 
-	err := Unmarshal(reader, &result)
+	result, err := Float(Unpickle(reader))
 
 	if err != nil {
 		t.Fatalf("Got error %v", err)
@@ -282,14 +279,13 @@ func TestProtocol1Float(t *testing.T) {
 }
 
 func TestProtocol1PopMark(t *testing.T) {
-	var result int64
 	/**
 		This exapmle is ultra-contrived. I could not get anything to
 		produce usage of POP_MARK using protocol 1. There are some
 		comments in Lib/pickle.py about a recursive tuple generating
 		this but I have no idea how that is even possible.
 
-		The disassembly of this looks like
+		The disassembly of this is
 	    0: K    BININT1    1
 	    2: (    MARK
 	    3: K        BININT1    2
@@ -303,7 +299,8 @@ func TestProtocol1PopMark(t *testing.T) {
 
 		**/
 	reader := strings.NewReader("K\x01(K\x02K\x031.")
-	err := Unmarshal(reader, &result)
+	result, err := Int(Unpickle(reader))
+
 	const EXPECT = 1
 	if err != nil {
 		t.Fatalf("Got error %v", err)
@@ -380,8 +377,8 @@ func TestProtocol2Long(t *testing.T) {
 }
 
 func TestProtocol2TrueFalse(t *testing.T) {
-	var result bool
-	err := Unmarshal(strings.NewReader("\x80\x02\x88."), &result)
+
+	result, err := Bool(Unpickle(strings.NewReader("\x80\x02\x88.")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +387,7 @@ func TestProtocol2TrueFalse(t *testing.T) {
 		t.Fatal("didnt get true")
 	}
 
-	err = Unmarshal(strings.NewReader("\x80\x02\x89."), &result)
+	result, err = Bool(Unpickle(strings.NewReader("\x80\x02\x89.")))
 	if err != nil {
 		t.Fatal(err)
 	}

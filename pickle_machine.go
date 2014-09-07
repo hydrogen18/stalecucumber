@@ -5,7 +5,6 @@ import "io"
 import "bytes"
 import "encoding/binary"
 import "fmt"
-import "math/big"
 
 var ErrOpcodeStopped = errors.New("STOP opcode found")
 var ErrStackTooSmall = errors.New("Stack is too small to perform requested operation")
@@ -14,65 +13,21 @@ var ErrOpcodeNotImplemented = errors.New("Input encountered opcode that is not i
 var ErrNoResult = errors.New("Input did not place a value onto the stack")
 var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
-func Unmarshal(reader io.Reader, dest interface{}) error {
+func Unpickle(reader io.Reader) (interface{}, error) {
 	var pm PickleMachine
 	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
 
 	err := (&pm).execute()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(pm.Stack) == 0 {
-		return ErrNoResult
+		return nil, ErrNoResult
 	}
 
-	v := pm.Stack[0]
-
-	switch dest := dest.(type) {
-	case *int64:
-		if vi, ok := v.(int64); ok {
-			*dest = vi
-			return nil
-		}
-	case *bool:
-		if vb, ok := v.(bool); ok {
-			*dest = vb
-			return nil
-		}
-	case *string:
-		if vs, ok := v.(string); ok {
-			*dest = vs
-			return nil
-		}
-	case **big.Int:
-		if vbi, ok := v.(*big.Int); ok {
-			*dest = vbi
-			return nil
-		}
-	case *float64:
-		if vf, ok := v.(float64); ok {
-			*dest = vf
-			return nil
-		}
-	case *[]interface{}:
-		if vsi, ok := v.([]interface{}); ok {
-			*dest = vsi
-			return nil
-		}
-	case *map[interface{}]interface{}:
-		if vsm, ok := v.(map[interface{}]interface{}); ok {
-			*dest = vsm
-			return nil
-		}
-	}
-
-	//TODO handle the case of v.(PickleNone{})
-	//& dest is a pointer type. Just set equal to nil
-	//and return
-
-	return fmt.Errorf("Cannot unmarshal object of type %T into destination of type %T", v, dest)
+	return pm.Stack[0], nil
 
 }
 
