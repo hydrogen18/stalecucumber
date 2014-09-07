@@ -89,6 +89,9 @@ the first character of the key is not uppercase, it is uppercased. If a field
 matching that name is found, the value in the python dictionary is unpacked
 into the value of the field within the structure.
 
+A list of python dictionaries can be unpickled into a slice of structures in
+Go.
+
 A nested python dictionary is unpickled into nested structures in Go. If a
 field is of type map[interface{}]interface{} is of course unpacked into that
 as well.
