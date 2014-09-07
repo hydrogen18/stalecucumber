@@ -107,3 +107,23 @@ func Dict(v interface{}, err error) (map[interface{}]interface{}, error) {
 
 	return nil, newWrongTypeError(v, vd)
 }
+
+func DictString(v interface{}, err error) (map[string]interface{}, error) {
+	var src map[interface{}]interface{}
+	src, err = Dict(v, err)
+	if err != nil {
+		return nil, err
+	}
+
+	dst := make(map[string]interface{}, len(src))
+
+	for k, v := range src {
+		kstr, ok := k.(string)
+		if !ok {
+			return nil, newWrongTypeError(src, dst)
+		}
+		dst[kstr] = v
+	}
+
+	return dst, nil
+}
