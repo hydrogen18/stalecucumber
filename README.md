@@ -10,33 +10,41 @@ protocol versions so they are readable by this package.
 ##TLDR
 
 Read a pickled string or unicode object
-	pickle.dumps("foobar")
-	---
-	var somePickledData io.Reader
-	mystring, err := stalecucumber.String(stalecucumber.Unpickle(somePickledData))
+```
+pickle.dumps("foobar")
+---
+var somePickledData io.Reader
+mystring, err := stalecucumber.String(stalecucumber.Unpickle(somePickledData))
+````
 
 Read a pickled integer
-	pickle.dumps(42)
-	---
-	var somePickledData io.Reader
-	myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
+```
+pickle.dumps(42)
+---
+var somePickledData io.Reader
+myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
+```
 
 Read a pickled list of numbers into a structure
-	pickle.dumps([8,8,2005])
-	---
-	var somePickledData io.Reader
-	numbers := make([]int64,0)
+```
+pickle.dumps([8,8,2005])
+---
+var somePickledData io.Reader
+numbers := make([]int64,0)
 
-	err := stalecucumber.UnpackInto(&numbers).From(stalecucumber.Unpickle(somePickledData))
+err := stalecucumber.UnpackInto(&numbers).From(stalecucumber.Unpickle(somePickledData))
+```
 
 Read a pickled dictionary into a structure
-	pickle.dumps({"apple":1,"banana":2,"cat":"hello","Dog":42.0})
-	---
-	var somePickledData io.Reader
-	mystruct := struct{
-		Apple int
-		Banana uint
-		Cat string
-		Dog float32}{}
+```
+pickle.dumps({"apple":1,"banana":2,"cat":"hello","Dog":42.0})
+---
+var somePickledData io.Reader
+mystruct := struct{
+	Apple int
+	Banana uint
+	Cat string
+	Dog float32}{}
 
-	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
+err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
+```
