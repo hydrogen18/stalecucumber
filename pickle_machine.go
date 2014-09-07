@@ -7,14 +7,28 @@ protocol versions so they are readable by this package.
 TLDR
 
 Read a pickled string or unicode object
+	pickle.dumps("foobar")
+	---
 	var somePickledData io.Reader
 	mystring, err := stalecucumber.String(stalecucumber.Unpickle(somePickledData))
 
 Read a pickled integer
+	pickle.dumps(42)
+	---
 	var somePickledData io.Reader
 	myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
 
-Read a python dictionary into a structure
+Read a pickled list of numbers into a structure
+	pickle.dumps([8,8,2006])
+	---
+	var somePickledData io.Reader
+	numbers := make([]int64,0)
+
+	err := stalecucumber.UnpackInto(&numbers).From(stalecucumber.Unpickle(somePickledData))
+
+Read a pickled dictionary into a structure
+	pickle.dumps({"apple":1,"banana":2,cat:"hello","Dog":42.0})
+	---
 	var somePickledData io.Reader
 	mystruct := struct{
 		Apple int
@@ -22,7 +36,7 @@ Read a python dictionary into a structure
 		Cat string
 		Dog float32}{}
 
-	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.From(somePickledData))
+	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
 
 Reading Data
 
@@ -91,6 +105,9 @@ into the value of the field within the structure.
 
 A list of python dictionaries can be unpickled into a slice of structures in
 Go.
+
+A homogeneous list of python values can be unpickled into a slice in
+Go with the appropriate element type.
 
 A nested python dictionary is unpickled into nested structures in Go. If a
 field is of type map[interface{}]interface{} is of course unpacked into that
