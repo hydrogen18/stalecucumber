@@ -20,7 +20,7 @@ Read a python dictionary into a structure
 		Apple int
 		Banana uint
 		Cat string
-		Dog float32}
+		Dog float32}{}
 
 	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.From(somePickledData))
 
