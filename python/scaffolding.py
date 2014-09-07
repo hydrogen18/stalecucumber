@@ -37,7 +37,7 @@ with open('protocol_2.go','w') as fout:
 with open('populate_jump_list.go','w') as fout:
 	fout.write(pkg_stmt)
 
-	fout.write(u'func populateJumpList(jl *OpcodeJumpList) {\n')
+	fout.write(u'func populateJumpList(jl *opcodeJumpList) {\n')
 	for opcode in itertools.chain(versions.v0,versions.v1,versions.v2):
 		fout.write(u"jl[0x%X] = (*PickleMachine).%s\n" % (ord(opcode.code),make_name(opcode.name)))
 	fout.write(u"}\n\n")
