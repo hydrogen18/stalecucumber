@@ -3,6 +3,10 @@ package stalecucumber
 import "fmt"
 import "math/big"
 
+/*
+This type is returned whenever a helper cannot convert the result of
+Unpickle into the desired type.
+*/
 type WrongTypeError struct {
 	Result  interface{}
 	Request string
@@ -16,6 +20,13 @@ func newWrongTypeError(result interface{}, request interface{}) error {
 	return WrongTypeError{Result: result, Request: fmt.Sprintf("%T", request)}
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a string.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func String(v interface{}, err error) (string, error) {
 	if err != nil {
 		return "", err
@@ -28,6 +39,13 @@ func String(v interface{}, err error) (string, error) {
 	return "", newWrongTypeError(v, vs)
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a int64.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func Int(v interface{}, err error) (int64, error) {
 	if err != nil {
 		return 0, err
@@ -48,6 +66,13 @@ func Int(v interface{}, err error) (int64, error) {
 
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a bool.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func Bool(v interface{}, err error) (bool, error) {
 	if err != nil {
 		return false, err
@@ -61,6 +86,13 @@ func Bool(v interface{}, err error) (bool, error) {
 
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a *big.Int.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func Big(v interface{}, err error) (*big.Int, error) {
 	if err != nil {
 		return nil, err
@@ -75,6 +107,13 @@ func Big(v interface{}, err error) (*big.Int, error) {
 
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a float64.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func Float(v interface{}, err error) (float64, error) {
 	if err != nil {
 		return 0.0, err
@@ -88,6 +127,13 @@ func Float(v interface{}, err error) (float64, error) {
 	return 0.0, newWrongTypeError(v, vf)
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a []interface{}.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func ListOrTuple(v interface{}, err error) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
@@ -102,6 +148,13 @@ func ListOrTuple(v interface{}, err error) ([]interface{}, error) {
 
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a map[interface{}]interface{}.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func Dict(v interface{}, err error) (map[interface{}]interface{}, error) {
 	if err != nil {
 		return nil, err
@@ -115,6 +168,13 @@ func Dict(v interface{}, err error) (map[interface{}]interface{}, error) {
 	return nil, newWrongTypeError(v, vd)
 }
 
+/*
+This helper attempts to convert the return value of Unpickle into a map[string]interface{}.
+
+If Unpickle returns an error that error is returned immediately.
+
+If the value cannot be converted an error is returned.
+*/
 func DictString(v interface{}, err error) (map[string]interface{}, error) {
 	var src map[interface{}]interface{}
 	src, err = Dict(v, err)
