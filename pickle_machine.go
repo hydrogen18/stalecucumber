@@ -14,7 +14,7 @@ Read a pickled integer
 	var somePickledData io.Reader
 	myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
 
-Read a python dicitionary directly into a structure
+Read a python dictionary into a structure
 	var somePickledData io.Reader
 	mystruct := struct{
 		Apple int
@@ -72,7 +72,45 @@ convert to the appropriate type. If type conversion fails it returns an error
 
 Unpacking into structures
 
+If the pickled object is a python dictionary that has only unicode and string
+objects for keys, that object can be unpickled into a struct in Go by using
+the "UnpackInto" function. The "From" receiver on the return value accepts
+the result of "Unpickle" as its actual parameters.
 
+The keys of the python dictionary are assigned to fields in a structure. If
+the first character of the key is not uppercase, it is uppercased. If a field
+matching that name is found, the value in the python dictionary is unpacked
+into the value of the field within the structure.
+
+A nested python dictionary is unpickled into nested structures in Go. If a
+field is of type map[interface{}]interface{} is of course unpacked into that
+as well.
+
+By default UnpackInto skips any missing fields and fails if a field's
+type is not compatible with the object's type.
+
+This behavior can be changed by setting "AllowMissingFields" and
+"AllowMismatchedFields" on the return value of UnpackInto before calling
+From.
+
+Recursive objects
+
+You can pickle recursive objects like so
+
+	a = {}
+	a["self"] = a
+	pickle.dumps(a)
+
+Python's pickler is intelligent enough not to emit an infinite data structure
+when a recursive object is pickled.
+
+I reccomend against pickling recursive objects in the first place, but this
+library handles unpickling them without a problem. The result of unpickling
+the above is map[interface{}]interface{} with a key "a" that contains
+a reference to itself.
+
+Attempting to unpack the result of the above python code into a structure
+with UnpackInto would either fail or recurse forever.
 
 Unsupported Opcodes
 

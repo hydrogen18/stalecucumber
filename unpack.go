@@ -25,11 +25,15 @@ var ErrNilPointer = errors.New("Destination cannot be a nil pointer")
 var ErrNotPointer = errors.New("Destination must be a pointer type")
 
 type unpacker struct {
-	dest interface{}
+	dest                  interface{}
+	AllowMissingFields    bool
+	AllowMismatchedFields bool
 }
 
 func UnpackInto(dest interface{}) unpacker {
-	return unpacker{dest: dest}
+	return unpacker{dest: dest,
+		AllowMissingFields:    true,
+		AllowMismatchedFields: false}
 }
 
 func (u unpacker) From(srcI interface{}, err error) error {
@@ -74,10 +78,15 @@ func (u unpacker) From(srcI interface{}, err error) error {
 
 		fv := v.FieldByName(k)
 		if !fv.IsValid() || !fv.CanSet() {
+			if !u.AllowMismatchedFields {
+				return UnpackingError{Source: src,
+					Destination: u.dest,
+					Err:         fmt.Errorf("Cannot find field for key %q", k)}
+			}
 			continue
 		}
 		err := u.assignTo(k, kv, fv)
-		if err != nil {
+		if err != nil && !u.AllowMismatchedFields {
 			return err
 		}
 	}
@@ -153,7 +162,9 @@ func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) e
 		}
 
 		//Try to assign this recursively
-		return unpacker{dest: dst.Addr().Interface()}.From(v, nil)
+		return unpacker{dest: dst.Addr().Interface(),
+			AllowMismatchedFields: u.AllowMismatchedFields,
+			AllowMissingFields:    u.AllowMissingFields}.From(v, nil)
 
 	}
 	return UnpackingError{Source: v,
