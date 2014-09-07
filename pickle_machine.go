@@ -68,7 +68,7 @@ func Unmarshal(reader io.Reader, dest interface{}) error {
 		}
 	}
 
-	//TODO handle the case of v.(PickleMark{})
+	//TODO handle the case of v.(PickleNone{})
 	//& dest is a pointer type. Just set equal to nil
 	//and return
 
