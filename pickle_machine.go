@@ -238,6 +238,17 @@ func (pm *PickleMachine) findMark() (int, error) {
 	return -1, ErrMarkNotFound
 }
 
+func (pm *PickleMachine) readFixedLengthRaw(l int64) ([]byte, error) {
+	var buf bytes.Buffer
+
+	_, err := io.CopyN(&buf, pm.Reader, l)
+	if err != nil {
+		return nil, err
+	}
+
+	return (&buf).Bytes(), nil
+}
+
 func (pm *PickleMachine) readFixedLengthString(l int64) (string, error) {
 	var buf bytes.Buffer
 	_, err := io.CopyN(&buf, pm.Reader, l)

@@ -1,29 +1,123 @@
 package stalecucumber
 
+import "fmt"
+import "math/big"
+
 /**
 Opcode: LONG1 (0x8a)
 Long integer using one-byte length.
-
-      A more efficient encoding of a Python long; the long1 encoding
-      says it all.**
+	An arbitrary length integer encoded as a bytestring.
+	A single byte following the opcode indicates the length
+	of the bytestring
+	If the string length is zero, then the value is zero.
+	Otherwise the bytestring is 256-complement representation
+	of an integer in reverse.
+      **
 Stack before: []
 Stack after: [long]
 **/
-func (pm *PickleMachine) opcode_LONG1 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_LONG1() error {
+	var l uint8
+	err := pm.readBinaryInto(&l, false)
+	if err != nil {
+		return err
+	}
+
+	if l == 0 {
+		pm.push(big.NewInt(0))
+		return nil
+	}
+
+	reversedData, err := pm.readFixedLengthRaw(int64(l))
+	if err != nil {
+		return err
+	}
+
+	//For no obvious reason, the python pickler
+	//always reverses the bytes. Reverse it here
+	var data [256]byte
+	{
+		var j int
+		for i := len(reversedData) - 1; i != -1; i-- {
+			data[j] = reversedData[i]
+			j++
+		}
+	}
+
+	v := new(big.Int)
+	v.SetBytes(data[:l])
+
+	invertIfNegative(data[0], v, int(l))
+
+	pm.push(v)
+
+	return nil
+
+}
+
+func invertIfNegative(first byte, v *big.Int, l int) {
+	var negative bool
+	//Check for negative number.
+	negative = (0x80 & first) != 0x0
+
+	if negative {
+		offset := big.NewInt(1)
+		offset.Lsh(offset, uint(l*8))
+		v.Sub(v, offset)
+	}
+
 }
 
 /**
 Opcode: LONG4 (0x8b)
 Long integer using found-byte length.
 
-      A more efficient encoding of a Python long; the long4 encoding
-      says it all.**
+    An arbitrary length integer encoded as a bytestring.
+	A four-byte signed little-endian integer
+	following the opcode indicates the length  of the bytestring.
+	If the string length is zero, then the value is zero.
+	Otherwise the bytestring is 256-complement representation
+	of an integer in reverse.**
 Stack before: []
 Stack after: [long]
 **/
-func (pm *PickleMachine) opcode_LONG4 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_LONG4() error {
+	var l uint32
+	err := pm.readBinaryInto(&l, false)
+	if err != nil {
+		return err
+	}
+
+	if l == 0 {
+		pm.push(big.NewInt(0))
+		return nil
+	}
+
+	reversedData, err := pm.readFixedLengthRaw(int64(l))
+	if err != nil {
+		return err
+	}
+
+	//For no obvious reason, the python pickler
+	//always reverses the bytes. Reverse it here
+	data := make([]byte, len(reversedData))
+	{
+		var j int
+		for i := len(reversedData) - 1; i != -1; i-- {
+			data[j] = reversedData[i]
+			j++
+		}
+	}
+
+	v := new(big.Int)
+	v.SetBytes(data[:l])
+
+	invertIfNegative(data[0], v, len(data))
+
+	pm.push(v)
+
+	return nil
+
 }
 
 /**
@@ -34,8 +128,9 @@ True.
 Stack before: []
 Stack after: [bool]
 **/
-func (pm *PickleMachine) opcode_NEWTRUE () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_NEWTRUE() error {
+	pm.push(true)
+	return nil
 }
 
 /**
@@ -46,8 +141,9 @@ True.
 Stack before: []
 Stack after: [bool]
 **/
-func (pm *PickleMachine) opcode_NEWFALSE () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_NEWFALSE() error {
+	pm.push(false)
+	return nil
 }
 
 /**
@@ -63,8 +159,8 @@ Build a one-tuple out of the topmost item on the stack.
 Stack before: [any]
 Stack after: [tuple]
 **/
-func (pm *PickleMachine) opcode_TUPLE1 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_TUPLE1() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -80,8 +176,8 @@ Build a two-tuple out of the top two items on the stack.
 Stack before: [any, any]
 Stack after: [tuple]
 **/
-func (pm *PickleMachine) opcode_TUPLE2 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_TUPLE2() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -97,8 +193,8 @@ Build a three-tuple out of the top three items on the stack.
 Stack before: [any, any, any]
 Stack after: [tuple]
 **/
-func (pm *PickleMachine) opcode_TUPLE3 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_TUPLE3() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -121,8 +217,8 @@ Extension code.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_EXT1 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_EXT1() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -134,8 +230,8 @@ Extension code.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_EXT2 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_EXT2() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -147,8 +243,8 @@ Extension code.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_EXT4 () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_EXT4() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -164,8 +260,8 @@ Build an object instance.
 Stack before: [any, any]
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_NEWOBJ () error {
-return ErrOpcodeNotImplemented
+func (pm *PickleMachine) opcode_NEWOBJ() error {
+	return ErrOpcodeNotImplemented
 }
 
 /**
@@ -178,7 +274,15 @@ Protocol version indicator.
 Stack before: []
 Stack after: []
 **/
-func (pm *PickleMachine) opcode_PROTO () error {
-return ErrOpcodeNotImplemented
-}
+func (pm *PickleMachine) opcode_PROTO() error {
+	var version int8
+	err := pm.readBinaryInto(&version, false)
+	if err != nil {
+		return err
+	}
+	if version != 2 {
+		return fmt.Errorf("Unsupported version #%d detected", pm.currentOpcode)
+	}
 
+	return nil
+}
