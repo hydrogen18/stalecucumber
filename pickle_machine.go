@@ -142,7 +142,7 @@ A few examples of what will definitely cause this opcode to be emitted
 	pickle.dumps(range) #Pickling the range function
 	pickle.dumps(Exception()) #Pickling an instance of a python class
 
-This opcodes will be partially supported in a future revision to this package
+This opcode will be partially supported in a future revision to this package
 that allows the unpickling of instances of Python classes.
 
 	REDUCE
@@ -158,7 +158,7 @@ that allows the unpickling of instances of Python classes.
 	PERSID
 
 This opcode is used to reference concrete definitions of objects between
-a pickler and an unpickler by an ID#. The pickle protocol doesn't define
+a pickler and an unpickler by an ID number. The pickle protocol doesn't define
 what a persistent ID means.
 
 This opcode is unlikely to ever be supported by this package.
