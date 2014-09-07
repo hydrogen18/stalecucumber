@@ -399,3 +399,10 @@ func TestProtocol2TrueFalse(t *testing.T) {
 		t.Fatal("didnt get false")
 	}
 }
+
+func TestProtocol2Tuples(t *testing.T) {
+	testList(t, "\x80\x02N\x85q\x00.", []interface{}{PickleNone{}})
+	testList(t, "\x80\x02U\x05kittyq\x00K7\x86q\x01.", []interface{}{"kitty", int64(55)})
+	testList(t, "\x80\x02U\x05kittyq\x00K7G@*\xbdp\xa3\xd7\n=\x87q\x01.", []interface{}{"kitty", int64(55), 13.37})
+
+}

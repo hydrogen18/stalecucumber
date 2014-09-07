@@ -160,7 +160,13 @@ Stack before: [any]
 Stack after: [tuple]
 **/
 func (pm *PickleMachine) opcode_TUPLE1() error {
-	return ErrOpcodeNotImplemented
+	v, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	pm.push([]interface{}{v})
+	return nil
 }
 
 /**
@@ -177,7 +183,19 @@ Stack before: [any, any]
 Stack after: [tuple]
 **/
 func (pm *PickleMachine) opcode_TUPLE2() error {
-	return ErrOpcodeNotImplemented
+	v := make([]interface{}, 2)
+	var err error
+	v[1], err = pm.pop()
+	if err != nil {
+		return err
+	}
+	v[0], err = pm.pop()
+	if err != nil {
+		return err
+	}
+
+	pm.push(v)
+	return nil
 }
 
 /**
@@ -194,7 +212,23 @@ Stack before: [any, any, any]
 Stack after: [tuple]
 **/
 func (pm *PickleMachine) opcode_TUPLE3() error {
-	return ErrOpcodeNotImplemented
+	v := make([]interface{}, 3)
+	var err error
+	v[2], err = pm.pop()
+	if err != nil {
+		return err
+	}
+	v[1], err = pm.pop()
+	if err != nil {
+		return err
+	}
+	v[0], err = pm.pop()
+	if err != nil {
+		return err
+	}
+
+	pm.push(v)
+	return nil
 }
 
 /**
