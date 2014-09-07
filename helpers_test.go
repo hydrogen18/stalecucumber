@@ -30,3 +30,33 @@ func TestHelperDictString(t *testing.T) {
 		t.Fatalf("Got %v expected %v", expect, result)
 	}
 }
+
+func TestIntHelper(t *testing.T) {
+	result, err := Int(Unpickle(strings.NewReader("\x80\x02\x8a\x08\xff\xff\xff\xff\xff\xff\xff\x7f.")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var expect int64
+	expect = 9223372036854775807
+	if result != expect {
+		t.Fatalf("got %d expected %d", result, expect)
+	}
+
+	expect *= -1
+
+	result, err = Int(Unpickle(strings.NewReader("\x80\x02\x8a\x08\x01\x00\x00\x00\x00\x00\x00\x80.")))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result != expect {
+		t.Fatalf("got %d expected %d", result, expect)
+	}
+
+	result, err = Int(Unpickle(strings.NewReader("\x80\x02\x8a\t\x00\x00\x00\x00\x00\x00\x00\x00\x01.")))
+	if err == nil {
+		t.Fatalf("should not have unpickled:%d", result)
+	}
+}

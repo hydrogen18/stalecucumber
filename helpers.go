@@ -37,6 +37,13 @@ func Int(v interface{}, err error) (int64, error) {
 		return vi, nil
 	}
 
+	vbi, ok := v.(*big.Int)
+	if ok {
+		if vbi.BitLen() <= 64 {
+			return vbi.Int64(), nil
+		}
+	}
+
 	return 0, newWrongTypeError(v, vi)
 
 }
