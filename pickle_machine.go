@@ -19,7 +19,7 @@ Read a pickled integer
 	myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
 
 Read a pickled list of numbers into a structure
-	pickle.dumps([8,8,2006])
+	pickle.dumps([8,8,2005])
 	---
 	var somePickledData io.Reader
 	numbers := make([]int64,0)
@@ -27,7 +27,7 @@ Read a pickled list of numbers into a structure
 	err := stalecucumber.UnpackInto(&numbers).From(stalecucumber.Unpickle(somePickledData))
 
 Read a pickled dictionary into a structure
-	pickle.dumps({"apple":1,"banana":2,cat:"hello","Dog":42.0})
+	pickle.dumps({"apple":1,"banana":2,"cat":"hello","Dog":42.0})
 	---
 	var somePickledData io.Reader
 	mystruct := struct{
