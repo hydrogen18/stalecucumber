@@ -103,6 +103,11 @@ func assignTo(v interface{}, dst reflect.Value) bool {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64:
 			dst.SetInt(v)
 			return true
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint64:
+			if v >= 0 {
+				dst.SetUint(uint64(v))
+				return true
+			}
 		}
 	case string:
 		switch dst.Kind() {
@@ -132,6 +137,16 @@ func assignTo(v interface{}, dst reflect.Value) bool {
 	case []interface{}:
 		if dst.Kind() == reflect.Slice &&
 			dst.Type().Elem().Kind() == reflect.Interface {
+			dst.Set(reflect.ValueOf(v))
+			return true
+		}
+
+	case map[interface{}]interface{}:
+		if dst.Kind() == reflect.Map {
+			dstT := dst.Type()
+			if dstT.Key().Kind() == reflect.Interface &&
+				dstT.Elem().Kind() == reflect.Interface {
+			}
 			dst.Set(reflect.ValueOf(v))
 			return true
 		}

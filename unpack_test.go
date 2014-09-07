@@ -13,7 +13,7 @@ type testStruct struct {
 
 type testStructWithPointer struct {
 	A int64
-	B int64
+	B uint64
 	C *int64
 }
 
@@ -140,6 +140,62 @@ func TestUnpackStructC(t *testing.T) {
 	}
 
 	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputC)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+}
+
+const inputD = "\x80\x02}q\x00(U\x08Aardvarkq\x01K\x01U\x05Bolusq\x02G@\x08\x00\x00\x00\x00\x00\x00U\x03Catq\x03}q\x04(U\x05appleq\x05K\x02U\x06bananaq\x06K\x03uu."
+
+type testStructDWithMap struct {
+	Aardvark uint
+	Bolus    float32
+	Cat      map[interface{}]interface{}
+}
+
+type testStructDWithStruct struct {
+	Aardvark uint
+	Bolus    float32
+	Cat      struct {
+		Apple  int
+		Banana uint
+	}
+}
+
+func TestUnpackStructDWithStruct(t *testing.T) {
+	dst := &testStructDWithStruct{}
+	expect := &testStructDWithStruct{
+		Aardvark: 1,
+		Bolus:    3.0,
+	}
+	expect.Cat.Apple = 2
+	expect.Cat.Banana = 3
+
+	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputD)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+}
+
+func TestUnpackStructDWithMap(t *testing.T) {
+	dst := &testStructDWithMap{}
+	expect := &testStructDWithMap{
+		Aardvark: 1,
+		Bolus:    3.0,
+		Cat:      make(map[interface{}]interface{}),
+	}
+	expect.Cat["apple"] = int64(2)
+	expect.Cat["banana"] = int64(3)
+
+	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputD)))
 	if err != nil {
 		t.Fatal(err)
 	}
