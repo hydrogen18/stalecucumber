@@ -4,7 +4,7 @@ Protocols 0,1,2 are implemented. These are the versions written by the Python
 2.x series. Python 3 defines newer protocol versions, but can write the older
 protocol versions so they are readable by this package.
 
-TLDR:
+TLDR
 
 Read a pickled string or unicode object
 	var somePickledData io.Reader

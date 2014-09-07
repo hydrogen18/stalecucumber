@@ -43,17 +43,22 @@ func UnpackInto(dest interface{}) unpacker {
 }
 
 func (u unpacker) From(srcI interface{}, err error) error {
+	//Check if an error occurred
 	if err != nil {
 		return err
 	}
 
+	//Get the value of the destination
 	v := reflect.ValueOf(u.dest)
+
+	//The destination must always be a pointer
 	if v.Kind() != reflect.Ptr {
 		return UnpackingError{Source: srcI,
 			Destination: u.dest,
 			Err:         ErrNotPointer}
 	}
 
+	//The destination can never be nil
 	if v.IsNil() {
 		return UnpackingError{Source: srcI,
 			Destination: u.dest,
@@ -61,18 +66,72 @@ func (u unpacker) From(srcI interface{}, err error) error {
 
 	}
 
+	//Indirect the destination. This gets the actual
+	//value pointed at
 	vIndirect := reflect.Indirect(v)
-	if srcList, ok := srcI.([]interface{}); ok {
+
+	//Check the input against known types
+	switch s := srcI.(type) {
+	case int64:
+		switch vIndirect.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64:
+			vIndirect.SetInt(s)
+			return nil
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint64:
+			if s >= 0 {
+				vIndirect.SetUint(uint64(s))
+				return nil
+			}
+		}
+	case string:
+		switch vIndirect.Kind() {
+		case reflect.String:
+			vIndirect.SetString(s)
+			return nil
+		}
+	case bool:
+		switch vIndirect.Kind() {
+		case reflect.Bool:
+			vIndirect.SetBool(s)
+			return nil
+		}
+	case float64:
+		switch vIndirect.Kind() {
+		case reflect.Float32, reflect.Float64:
+			vIndirect.SetFloat(s)
+			return nil
+		}
+	case *big.Int:
+		dstBig, ok := vIndirect.Addr().Interface().(*big.Int)
+		if ok {
+			(dstBig).Set(s)
+			return nil
+		}
+
+		if vi, err := Int(srcI, nil); err == nil {
+			return unpacker{dest: v.Interface(),
+				AllowMismatchedFields: u.AllowMismatchedFields,
+				AllowMissingFields:    u.AllowMissingFields}.From(vi, nil)
+		}
+
+	case []interface{}:
+		//Check that the destination is a slice
 		if vIndirect.Kind() != reflect.Slice {
-			return UnpackingError{Source: srcI,
+			return UnpackingError{Source: s,
 				Destination: u.dest,
 				Err:         fmt.Errorf("Cannot unpack slice into destination")}
 		}
+		//Check for exact type match
+		if vIndirect.Type().Elem().Kind() == reflect.Interface {
+			vIndirect.Set(reflect.ValueOf(s))
+			return nil
+		}
 
+		//Build the value using reflection
 		replacement := reflect.MakeSlice(vIndirect.Type(),
-			len(srcList), len(srcList))
+			len(s), len(s))
 
-		for i, srcV := range srcList {
+		for i, srcV := range s {
 			dstV := replacement.Index(i)
 
 			//Check if the slice element type is
@@ -88,6 +147,7 @@ func (u unpacker) From(srcI interface{}, err error) error {
 					dstV.Set(reflect.New(dstV.Type().Elem()))
 				}
 			}
+			//Recurse to set the value
 			err := unpacker{dest: dstV.Interface(),
 				AllowMissingFields:    u.AllowMissingFields,
 				AllowMismatchedFields: u.AllowMismatchedFields}.
@@ -98,52 +158,75 @@ func (u unpacker) From(srcI interface{}, err error) error {
 		}
 		vIndirect.Set(replacement)
 		return nil
-	}
 
-	v = vIndirect
-
-	var src map[string]interface{}
-	src, err = DictString(srcI, err)
-	if err != nil {
-		return UnpackingError{Source: srcI,
-			Destination: u.dest,
-			Err:         fmt.Errorf("Cannot unpack source into struct")}
-	}
-
-	if v.Kind() != reflect.Struct {
-		return UnpackingError{Source: src,
-			Destination: u.dest,
-			Err:         fmt.Errorf("Cannot unpack into %v", v.Kind().String())}
-
-	}
-
-	for k, kv := range src {
-		//Ignore zero length strings, a struct
-		//cannot have such a field
-		if len(k) == 0 {
-			continue
-		}
-		//Capitalize the first character. Structs
-		//do not export fields with a lower case
-		//first character
-		k = strings.ToUpper(k[0:1]) + k[1:]
-
-		fv := v.FieldByName(k)
-		if !fv.IsValid() || !fv.CanSet() {
-			if !u.AllowMismatchedFields {
-				return UnpackingError{Source: src,
-					Destination: u.dest,
-					Err:         fmt.Errorf("Cannot find field for key %q", k)}
+	case map[interface{}]interface{}:
+		//Check to see if the field is exactly
+		//of the type
+		if vIndirect.Kind() == reflect.Map {
+			dstT := vIndirect.Type()
+			if dstT.Key().Kind() == reflect.Interface &&
+				dstT.Elem().Kind() == reflect.Interface {
+				vIndirect.Set(reflect.ValueOf(s))
+				return nil
 			}
-			continue
 		}
-		err := u.assignTo(k, kv, fv)
-		if err != nil && !u.AllowMismatchedFields {
-			return err
+
+		var src map[string]interface{}
+		src, err = DictString(srcI, err)
+		if err != nil {
+			return UnpackingError{Source: srcI,
+				Destination: u.dest,
+				Err:         fmt.Errorf("Cannot unpack source into struct")}
 		}
+
+		if vIndirect.Kind() != reflect.Struct {
+			return UnpackingError{Source: src,
+				Destination: u.dest,
+				Err:         fmt.Errorf("Cannot unpack into %v", v.Kind().String())}
+
+		}
+
+		for k, kv := range src {
+			//Ignore zero length strings, a struct
+			//cannot have such a field
+			if len(k) == 0 {
+				continue
+			}
+			//Capitalize the first character. Structs
+			//do not export fields with a lower case
+			//first character
+			k = strings.ToUpper(k[0:1]) + k[1:]
+
+			fv := vIndirect.FieldByName(k)
+			if !fv.IsValid() || !fv.CanSet() {
+				if !u.AllowMismatchedFields {
+					return UnpackingError{Source: src,
+						Destination: u.dest,
+						Err:         fmt.Errorf("Cannot find field for key %q", k)}
+				}
+				continue
+			}
+			if fv.Kind() != reflect.Ptr {
+				fv = fv.Addr()
+			} else if fv.IsNil() {
+				fv.Set(reflect.New(fv.Type().Elem()))
+			}
+
+			err := unpacker{dest: fv.Interface(),
+				AllowMismatchedFields: u.AllowMismatchedFields,
+				AllowMissingFields:    u.AllowMissingFields}.From(kv, nil)
+
+			if err != nil && !u.AllowMismatchedFields {
+				return err
+			}
+		}
+
+		return nil
 	}
 
-	return nil
+	return UnpackingError{Source: srcI,
+		Destination: u.dest,
+		Err:         fmt.Errorf("Cannot unpack")}
 }
 
 func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) error {

@@ -358,3 +358,69 @@ func TestUnpackDictWithListOfDictsIntoStructWithListOfDicts(t *testing.T) {
 	}
 
 }
+
+const inputF = "(lp0\nI0\naI1\naI2\naI3\naI4\na."
+
+func TestUnpackSliceOfInts(t *testing.T) {
+	dst := make([]int64, 0)
+	expect := []int64{0, 1, 2, 3, 4}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(inputF)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
+}
+
+const inputG = "(lp0\nS'foo'\np1\naVbar\np2\naS'qux'\np3\na."
+
+func TestUnpackSliceOfStrings(t *testing.T) {
+	dst := []string{"disappears"}
+	expect := []string{"foo", "bar", "qux"}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(inputG)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
+}
+
+const inputH = "(lp0\nS'meow'\np1\naI42\naS'awesome'\np2\na."
+
+func TestUnpackHeterogeneousList(t *testing.T) {
+	dst := []interface{}{}
+	expect := []interface{}{"meow", int64(42), "awesome"}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(inputH)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
+
+	dst2 := []string{}
+
+	err = UnpackInto(&dst2).From(Unpickle(strings.NewReader(inputH)))
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	upe, ok := err.(UnpackingError)
+	if !ok {
+		t.Fatalf("Got wrong error type %T:%v", err, err)
+	}
+
+	i, ok := upe.Source.(int64)
+	if !ok && i == 42 {
+		t.Fatalf("Failed on wrong value %v(%T)", upe.Source, upe.Source)
+	}
+
+}
