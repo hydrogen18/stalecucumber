@@ -1,3 +1,162 @@
+/*
+This package reads pickled data written from python using the "pickle" module.
+Protocols 0,1,2 are implemented. These are the versions written by the Python
+2.x series. Python 3 defines newer protocol versions, but can write the older
+protocol versions so they are readable by this package.
+
+TLDR:
+
+Read a pickled string or unicode object
+	var somePickledData io.Reader
+	mystring, err := stalecucumber.String(stalecucumber.Unpickle(somePickledData))
+
+Read a pickled integer
+	var somePickledData io.Reader
+	myint64, err := stalecucumber.Int(stalecucumber.Unpickle(somePickledData))
+
+Read a python dicitionary directly into a structure
+	var somePickledData io.Reader
+	mystruct := struct{
+		Apple int
+		Banana uint
+		Cat string
+		Dog float32}
+
+	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.From(somePickledData))
+
+Reading Data
+
+The stalecucumber.Unpickle function takes a reader and attempts to read
+a complete pickle program from it. This is normally the output of the function
+like "pickle.dump" from Python.
+
+The returned type is interface{} because unpickling can generate any type. Use
+a helper function to convert to another type without an additional type check.
+
+An error is returned if the underlying reader fails, the program
+is invalid, or unsupported opcodes are encountered. See below for the details
+of unsupported opcodes.
+
+
+Type Conversions
+
+Types conversion Python types to Go types is performed as followed
+	int -> int64
+	string -> string
+	unicode -> string
+	float -> float64
+	long -> big.Int from the "math/big" package
+	lists -> []interface{}
+	tuples -> []interface{}
+	dict -> []interface{}
+
+The following values are converted from Python to the Go types
+	True & False -> bool
+	None -> stalecucumber.PickleNone
+
+Helper Functions
+
+The following helper functions were inspired by the github.com/garyburd/redigo
+package. Each function takes the result of Unpickle as its arguments. If unpickle
+fails it does nothing and returns that error. Otherwise it attempts to
+convert to the appropriate type. If type conversion fails it returns an error
+
+	String - string
+	Int - int64
+	Bool - bool
+	Big - *big.Int
+	ListOrTuple - []interface{}
+	Float - float64
+	Dict - map[interface{}]interface{}
+	DictString -  map[string]interface{}
+
+Unpacking into structures
+
+
+
+Unsupported Opcodes
+
+The pickle format is incredibly flexible and as a result has some
+features that are impractical or unimportant when implementing a reader in
+another language.
+
+Each set of opcodes is listed below by protocol version with the impact.
+
+Protocol 0
+
+	GLOBAL
+
+This opcode is equivalent to calling "import foo; foo.bar" in python. It is
+generated whenever an object instance, class definition, or method definition
+is serialized. As long as the pickled data does not contain an instance
+of a python class or a reference to a python callable this opcode is not
+emitted by the "pickle" module.
+
+A few examples of what will definitely cause this opcode to be emitted
+
+	pickle.dumps(range) #Pickling the range function
+	pickle.dumps(Exception()) #Pickling an instance of a python class
+
+This opcodes will be partially supported in a future revision to this package
+that allows the unpickling of instances of Python classes.
+
+	REDUCE
+	BUILD
+	INST
+
+These opcodes are used in recreating pickled python objects. That is currently
+not supported by this package.
+
+These opcodes will be supported in a future revision to this package
+that allows the unpickling of instances of Python classes.
+
+	PERSID
+
+This opcode is used to reference concrete definitions of objects between
+a pickler and an unpickler by an ID#. The pickle protocol doesn't define
+what a persistent ID means.
+
+This opcode is unlikely to ever be supported by this package.
+
+Protocol 1
+
+	OBJ
+
+This opcodes is used in recreating pickled python objects. That is currently
+not supported by this package.
+
+This opcode will supported in a future revision to this package
+that allows the unpickling of instances of Python classes.
+
+
+	BINPERSID
+
+This opcode is equivalent to PERSID in protocol 0 and won't be supported
+for the same reason.
+
+Protocol 2
+
+	NEWOBJ
+
+This opcodes is used in recreating pickled python objects. That is currently
+not supported by this package.
+
+This opcode will supported in a future revision to this package
+that allows the unpickling of instances of Python classes.
+
+	EXT1
+	EXT2
+	EXT4
+
+These opcodes allow using a registry
+of popular objects that are pickled by name, typically classes.
+It is envisioned that through a global negotiation and
+registration process, third parties can set up a mapping between
+ints and object names.
+
+These opcodes is unlikely to ever be supported by this package.
+
+*/
 package stalecucumber
 
 import "errors"
