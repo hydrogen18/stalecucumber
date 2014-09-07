@@ -128,6 +128,13 @@ func assignTo(v interface{}, dst reflect.Value) bool {
 			(dstBig).Set(v)
 			return true
 		}
+
+	case []interface{}:
+		if dst.Kind() == reflect.Slice &&
+			dst.Type().Elem().Kind() == reflect.Interface {
+			dst.Set(reflect.ValueOf(v))
+			return true
+		}
 	}
 	return false
 }

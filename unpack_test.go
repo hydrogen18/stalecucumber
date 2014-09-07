@@ -78,8 +78,16 @@ type testStructB struct {
 	A int
 	B float32
 	C string
-	D *big.Int
+	D big.Int
 	E bool
+}
+
+type testStructBWithPointers struct {
+	A *int
+	B *float32
+	C *string
+	D *big.Int
+	E *bool
 }
 
 func TestUnpackStructB(t *testing.T) {
@@ -88,11 +96,50 @@ func TestUnpackStructB(t *testing.T) {
 		A: 42,
 		B: 13.37,
 		C: "foobar",
-		D: big.NewInt(1),
+		D: *big.NewInt(1),
 		E: true,
 	}
 
 	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputB)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+
+	dstP := &testStructBWithPointers{}
+
+	err = UnpackInto(dstP).From(Unpickle(strings.NewReader(inputB)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+}
+
+const inputC = "\x80\x02}q\x00(U\x03dogq\x01U\x01aq\x02U\x01bq\x03U\x01cq\x04\x87q\x05U\x05appleq\x06K\x01K\x02K\x03\x87q\x07U\ncanteloupeq\x08h\x05U\x06bananaq\th\x07u."
+
+type testStructC struct {
+	Apple      []interface{}
+	Banana     []interface{}
+	Canteloupe []interface{}
+	Dog        []interface{}
+}
+
+func TestUnpackStructC(t *testing.T) {
+	dst := &testStructC{}
+	expect := &testStructC{
+		Apple:      []interface{}{int64(1), int64(2), int64(3)},
+		Banana:     []interface{}{int64(1), int64(2), int64(3)},
+		Canteloupe: []interface{}{"a", "b", "c"},
+		Dog:        []interface{}{"a", "b", "c"},
+	}
+
+	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputC)))
 	if err != nil {
 		t.Fatal(err)
 	}
