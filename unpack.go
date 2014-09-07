@@ -12,6 +12,12 @@ type UnpackingError struct {
 	Err         error
 }
 
+/*
+This type is returned when a call to From() fails.
+Setting "AllowMissingFields" and "AllowMismatchedFields"
+on the result of "UnpackInto" controls if this error is
+returned or not.
+*/
 func (ue UnpackingError) Error() string {
 	return fmt.Sprintf("Error unpacking %v(%T) into %v(%T):%v",
 		ue.Source,
