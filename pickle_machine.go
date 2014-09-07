@@ -16,6 +16,7 @@ var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
 func Unmarshal(reader io.Reader, dest interface{}) error {
 	var pm PickleMachine
+	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
 
 	err := (&pm).execute()
@@ -87,6 +88,7 @@ type PickleMachine struct {
 	Reader io.Reader
 
 	currentOpcode uint8
+	buf           *bytes.Buffer
 }
 
 type PickleMachineError struct {
@@ -239,32 +241,33 @@ func (pm *PickleMachine) findMark() (int, error) {
 }
 
 func (pm *PickleMachine) readFixedLengthRaw(l int64) ([]byte, error) {
-	var buf bytes.Buffer
 
-	_, err := io.CopyN(&buf, pm.Reader, l)
+	pm.buf.Reset()
+	_, err := io.CopyN(pm.buf, pm.Reader, l)
 	if err != nil {
 		return nil, err
 	}
 
-	return (&buf).Bytes(), nil
+	return pm.buf.Bytes(), nil
 }
 
 func (pm *PickleMachine) readFixedLengthString(l int64) (string, error) {
-	var buf bytes.Buffer
-	_, err := io.CopyN(&buf, pm.Reader, l)
+
+	//Avoid getting "<nil>"
+	if l == 0 {
+		return "", nil
+	}
+
+	pm.buf.Reset()
+	_, err := io.CopyN(pm.buf, pm.Reader, l)
 	if err != nil {
 		return "", err
 	}
-	//Avoid getting "<nil>"
-	if (&buf).Len() == 0 {
-		return "", nil
-	}
-	return (&buf).String(), nil
+	return pm.buf.String(), nil
 }
 
 func (pm *PickleMachine) readString() (string, error) {
-	var buf bytes.Buffer
-
+	pm.buf.Reset()
 	for {
 		var v [1]byte
 		n, err := pm.Reader.Read(v[:])
@@ -278,13 +281,14 @@ func (pm *PickleMachine) readString() (string, error) {
 		if v[0] == '\n' {
 			break
 		}
-		(&buf).WriteByte(v[0])
+		pm.buf.WriteByte(v[0])
 	}
+
 	//Avoid getting "<nil>"
-	if (&buf).Len() == 0 {
+	if pm.buf.Len() == 0 {
 		return "", nil
 	}
-	return (&buf).String(), nil
+	return pm.buf.String(), nil
 }
 
 func (pm *PickleMachine) readBinaryInto(dst interface{}, bigEndian bool) error {
