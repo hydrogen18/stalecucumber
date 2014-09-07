@@ -37,10 +37,11 @@ An error is returned if the underlying reader fails, the program
 is invalid, or unsupported opcodes are encountered. See below for the details
 of unsupported opcodes.
 
-If the version of python you are using supports protocol 2, you should always
-specify that protocol version. By default the "pickle" and "cPickle" modules
-in Python write using protocol 0. Protocol 0 requires much more space to
-represent the same values and is much slower to interpret.
+If the version of python you are using supports protocol version 1 or 2,
+you should always specify that protocol version. By default the "pickle"
+and "cPickle" modules in Python write using protocol 0. Protocol 0
+requires much more space to represent the same values and is much
+slower to parse.
 
 Type Conversions
 
@@ -65,14 +66,16 @@ package. Each function takes the result of Unpickle as its arguments. If unpickl
 fails it does nothing and returns that error. Otherwise it attempts to
 convert to the appropriate type. If type conversion fails it returns an error
 
-	String - string
-	Int - int64
-	Bool - bool
-	Big - *big.Int
-	ListOrTuple - []interface{}
-	Float - float64
-	Dict - map[interface{}]interface{}
-	DictString -  map[string]interface{}
+	String - string from Python string or unicode
+	Int - int64 from Python int or long
+	Bool - bool from Python True or False
+	Big - *big.Int from Python long
+	ListOrTuple - []interface{} from Python Tuple or List
+	Float - float64 from Python float
+	Dict - map[interface{}]interface{} from Python dictionary
+	DictString -
+		map[string]interface{} from Python dictionary.
+		Keys must all be of type unicode or string.
 
 Unpacking into structures
 
