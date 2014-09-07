@@ -171,21 +171,6 @@ func (pm *PickleMachine) pop() (interface{}, error) {
 	return top, nil
 }
 
-/**
-func (pm *PickleMachine) popInt() (int64, error) {
-	v, err := pm.pop()
-	if err != nil {
-		return 0, err
-	}
-
-	vi, ok := v.(int64)
-	if !ok {
-		return 0, fmt.Errorf("Type %T was requested from stack but found %v(%T)", vi, v, v)
-	}
-
-	return vi, nil
-}**/
-
 func (pm *PickleMachine) readFromStack(offset int) (interface{}, error) {
 	return pm.readFromStackAt(len(pm.Stack) - 1 - offset)
 }
