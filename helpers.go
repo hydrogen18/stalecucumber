@@ -115,6 +115,10 @@ func DictString(v interface{}, err error) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	return tryDictToDictString(src)
+}
+
+func tryDictToDictString(src map[interface{}]interface{}) (map[string]interface{}, error) {
 	dst := make(map[string]interface{}, len(src))
 
 	for k, v := range src {
@@ -126,4 +130,5 @@ func DictString(v interface{}, err error) (map[string]interface{}, error) {
 	}
 
 	return dst, nil
+
 }

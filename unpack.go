@@ -76,17 +76,16 @@ func (u unpacker) From(srcI interface{}, err error) error {
 		if !fv.IsValid() || !fv.CanSet() {
 			continue
 		}
-		if !assignTo(kv, fv) {
-			return UnpackingError{Source: src,
-				Destination: u.dest,
-				Err:         fmt.Errorf("Cannot unpack into field %q with type %s a value %v of with type %T ", k, fv.Type(), kv, kv)}
+		err := u.assignTo(k, kv, fv)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func assignTo(v interface{}, dst reflect.Value) bool {
+func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) error {
 	//If the destination is a pointer then
 	//it cannot be assigned directly
 	if dst.Kind() == reflect.Ptr {
@@ -95,61 +94,69 @@ func assignTo(v interface{}, dst reflect.Value) bool {
 		if dst.IsNil() {
 			dst.Set(reflect.New(dst.Type().Elem()))
 		}
-		return assignTo(v, reflect.Indirect(dst))
+		return u.assignTo(fieldName, v, reflect.Indirect(dst))
 	}
 	switch v := v.(type) {
 	case int64:
 		switch dst.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64:
 			dst.SetInt(v)
-			return true
+			return nil
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint64:
 			if v >= 0 {
 				dst.SetUint(uint64(v))
-				return true
+				return nil
 			}
 		}
 	case string:
 		switch dst.Kind() {
 		case reflect.String:
 			dst.SetString(v)
-			return true
+			return nil
 		}
 	case bool:
 		switch dst.Kind() {
 		case reflect.Bool:
 			dst.SetBool(v)
-			return true
+			return nil
 		}
 	case float64:
 		switch dst.Kind() {
 		case reflect.Float32, reflect.Float64:
 			dst.SetFloat(v)
-			return true
+			return nil
 		}
 	case *big.Int:
 		dstBig, ok := dst.Addr().Interface().(*big.Int)
 		if ok {
 			(dstBig).Set(v)
-			return true
+			return nil
 		}
 
 	case []interface{}:
 		if dst.Kind() == reflect.Slice &&
 			dst.Type().Elem().Kind() == reflect.Interface {
 			dst.Set(reflect.ValueOf(v))
-			return true
+			return nil
 		}
 
 	case map[interface{}]interface{}:
+		//Check to see if the field is exactly
+		//of the type.
 		if dst.Kind() == reflect.Map {
 			dstT := dst.Type()
 			if dstT.Key().Kind() == reflect.Interface &&
 				dstT.Elem().Kind() == reflect.Interface {
+				dst.Set(reflect.ValueOf(v))
+				return nil
 			}
-			dst.Set(reflect.ValueOf(v))
-			return true
 		}
+
+		//Try to assign this recursively
+		return unpacker{dest: dst.Addr().Interface()}.From(v, nil)
+
 	}
-	return false
+	return UnpackingError{Source: v,
+		Destination: dst.Interface(),
+		Err:         fmt.Errorf("For field %q source type doesn't match destination field", fieldName)}
 }

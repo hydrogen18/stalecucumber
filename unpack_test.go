@@ -150,6 +150,7 @@ func TestUnpackStructC(t *testing.T) {
 }
 
 const inputD = "\x80\x02}q\x00(U\x08Aardvarkq\x01K\x01U\x05Bolusq\x02G@\x08\x00\x00\x00\x00\x00\x00U\x03Catq\x03}q\x04(U\x05appleq\x05K\x02U\x06bananaq\x06K\x03uu."
+const inputDWithUnicode = "\x80\x02}q\x00(X\x08\x00\x00\x00Aardvarkq\x01K\x01U\x05Bolusq\x02G@\x08\x00\x00\x00\x00\x00\x00U\x03Catq\x03}q\x04(U\x05appleq\x05K\x02X\x06\x00\x00\x00bananaq\x06K\x03uu."
 
 type testStructDWithMap struct {
 	Aardvark uint
@@ -183,6 +184,16 @@ func TestUnpackStructDWithStruct(t *testing.T) {
 	if !reflect.DeepEqual(dst, expect) {
 		t.Fatalf("Got %v expected %v", *dst, *expect)
 	}
+
+	dst = &testStructDWithStruct{}
+	err = UnpackInto(dst).From(Unpickle(strings.NewReader(inputDWithUnicode)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
 }
 
 func TestUnpackStructDWithMap(t *testing.T) {
@@ -202,5 +213,23 @@ func TestUnpackStructDWithMap(t *testing.T) {
 
 	if !reflect.DeepEqual(dst, expect) {
 		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+}
+
+type testStructDWithBadStruct struct {
+	Aardvark uint
+	Bolus    float32
+	Cat      struct {
+		Apple  string
+		Banana uint
+	}
+}
+
+func TestUnpackStructDWithBadStruct(t *testing.T) {
+	dst := &testStructDWithBadStruct{}
+
+	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputD)))
+	if err == nil {
+		t.Fatalf("Should not have unpacked:%v", dst)
 	}
 }
