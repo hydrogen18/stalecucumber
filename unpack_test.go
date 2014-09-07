@@ -18,6 +18,7 @@ type testStructWithPointer struct {
 }
 
 const input0 = "\x80\x02}q\x00(U\x01aq\x01K\x01U\x01cq\x02K\x03U\x01bq\x03K\x02u."
+const input0WithLong = "(dp0\nS'a'\np1\nL1L\nsS'c'\np2\nI3\nsS'b'\np3\nI2\ns."
 
 func TestUnpackIntoStruct(t *testing.T) {
 	dst := &testStruct{}
@@ -28,6 +29,19 @@ func TestUnpackIntoStruct(t *testing.T) {
 	}
 
 	err := UnpackInto(dst).From(Unpickle(strings.NewReader(input0)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+
+	//Test with python long type in input. Generates *big.Int
+	//with value 1
+	dst = &testStruct{}
+
+	err = UnpackInto(dst).From(Unpickle(strings.NewReader(input0WithLong)))
 	if err != nil {
 		t.Fatal(err)
 	}

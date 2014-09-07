@@ -142,6 +142,10 @@ func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) e
 			return nil
 		}
 
+		if vi, err := Int(v, nil); err == nil {
+			return u.assignTo(fieldName, vi, dst)
+		}
+
 	case []interface{}:
 		if dst.Kind() == reflect.Slice &&
 			dst.Type().Elem().Kind() == reflect.Interface {
