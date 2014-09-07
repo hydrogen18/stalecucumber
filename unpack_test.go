@@ -321,3 +321,40 @@ func TestUnpackStructDWithBadStruct(t *testing.T) {
 		t.Fatalf("Should not have unpacked:%v", dst)
 	}
 }
+
+const inputE = "(dp0\nS'ds'\np1\n(lp2\n(dp3\nS'a'\np4\nL1L\nsS'c'\np5\nI3\nsS'b'\np6\nI2\nsa(dp7\ng4\nL1L\nsg5\nI3\nsg6\nI4\nsa(dp8\ng4\nL1L\nsg5\nI5\nsg6\nI2\nsas."
+
+type testStructureE struct {
+	Ds []testStruct
+}
+
+func TestUnpackDictWithListOfDictsIntoStructWithListOfDicts(t *testing.T) {
+	dst := testStructureE{}
+	e := testStructureE{}
+	e.Ds = make([]testStruct, 3)
+	e.Ds[0] = testStruct{
+		A: 1,
+		B: 2,
+		C: 3,
+	}
+	e.Ds[1] = testStruct{
+		A: 1,
+		B: 4,
+		C: 3,
+	}
+	e.Ds[2] = testStruct{
+		A: 1,
+		B: 2,
+		C: 5,
+	}
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(inputE)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, e) {
+		t.Fatalf("Got %v expected %v", dst, e)
+	}
+
+}

@@ -204,6 +204,9 @@ func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) e
 			dst.Set(reflect.ValueOf(v))
 			return nil
 		}
+		return unpacker{dest: dst.Addr().Interface(),
+			AllowMismatchedFields: u.AllowMismatchedFields,
+			AllowMissingFields:    u.AllowMissingFields}.From(v, nil)
 
 	case map[interface{}]interface{}:
 		//Check to see if the field is exactly
@@ -221,7 +224,6 @@ func (u unpacker) assignTo(fieldName string, v interface{}, dst reflect.Value) e
 		return unpacker{dest: dst.Addr().Interface(),
 			AllowMismatchedFields: u.AllowMismatchedFields,
 			AllowMissingFields:    u.AllowMissingFields}.From(v, nil)
-
 	}
 	return UnpackingError{Source: v,
 		Destination: dst.Interface(),
