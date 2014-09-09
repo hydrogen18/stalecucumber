@@ -255,6 +255,35 @@ type testStructDWithStruct struct {
 	}
 }
 
+type testStructDWithTags struct {
+	One   uint    `pickle:"Aardvark"`
+	Two   float32 `pickle:"Bolus"`
+	Three struct {
+		Four int  `pickle:"apple"`
+		Five uint `pickle:"banana"`
+	} `pickle:"Cat"`
+}
+
+func TestStructDWithPickleNames(t *testing.T) {
+	dst := &testStructDWithTags{}
+	expect := &testStructDWithTags{
+		One: 1,
+		Two: 3.0,
+	}
+	expect.Three.Four = 2
+	expect.Three.Five = 3
+
+	err := UnpackInto(dst).From(Unpickle(strings.NewReader(inputD)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+
+}
+
 func TestUnpackStructDWithStruct(t *testing.T) {
 	dst := &testStructDWithStruct{}
 	expect := &testStructDWithStruct{

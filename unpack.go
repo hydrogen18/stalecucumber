@@ -186,18 +186,36 @@ func (u unpacker) From(srcI interface{}, err error) error {
 
 		}
 
-		for k, kv := range src {
-			//Ignore zero length strings, a struct
-			//cannot have such a field
-			if len(k) == 0 {
-				continue
-			}
-			//Capitalize the first character. Structs
-			//do not export fields with a lower case
-			//first character
-			k = strings.ToUpper(k[0:1]) + k[1:]
+		var fieldByTag map[string]int
+		vIndirectType := reflect.TypeOf(vIndirect.Interface())
+		numFields := vIndirectType.NumField()
 
-			fv := vIndirect.FieldByName(k)
+		for i := 0; i != numFields; i++ {
+			fv := vIndirectType.Field(i)
+			tag := fv.Tag.Get("pickle")
+
+			if len(tag) != 0 {
+				if fieldByTag == nil {
+					fieldByTag = make(map[string]int)
+				}
+				fieldByTag[tag] = i
+			}
+		}
+
+		for k, kv := range src {
+			var fv reflect.Value
+
+			if fieldIndex, ok := fieldByTag[k]; ok {
+				fv = vIndirect.Field(fieldIndex)
+			} else {
+				//Capitalize the first character. Structs
+				//do not export fields with a lower case
+				//first character
+				capk := strings.ToUpper(k[0:1]) + k[1:]
+
+				fv = vIndirect.FieldByName(capk)
+			}
+
 			if !fv.IsValid() || !fv.CanSet() {
 				if !u.AllowMismatchedFields {
 					return UnpackingError{Source: src,

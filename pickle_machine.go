@@ -98,7 +98,10 @@ objects for keys, that object can be unpickled into a struct in Go by using
 the "UnpackInto" function. The "From" receiver on the return value accepts
 the result of "Unpickle" as its actual parameters.
 
-The keys of the python dictionary are assigned to fields in a structure. If
+The keys of the python dictionary are assigned to fields in a structure.
+Structures may specify the tag "pickle" on fields. The value of this tag is taken
+as the key name of the Python dictionary value to place in this field. If no
+field has a matching "pickle" tag the fields are looked up by name. If
 the first character of the key is not uppercase, it is uppercased. If a field
 matching that name is found, the value in the python dictionary is unpacked
 into the value of the field within the structure.
