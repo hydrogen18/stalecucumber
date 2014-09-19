@@ -134,7 +134,7 @@ You can pickle recursive objects like so
 Python's pickler is intelligent enough not to emit an infinite data structure
 when a recursive object is pickled.
 
-I reccomend against pickling recursive objects in the first place, but this
+I recommend against pickling recursive objects in the first place, but this
 library handles unpickling them without a problem. The result of unpickling
 the above is map[interface{}]interface{} with a key "a" that contains
 a reference to itself.
