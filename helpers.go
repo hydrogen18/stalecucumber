@@ -57,7 +57,7 @@ func Int(v interface{}, err error) (int64, error) {
 
 	vbi, ok := v.(*big.Int)
 	if ok {
-		if vbi.BitLen() <= 64 {
+		if vbi.BitLen() <= 63 {
 			return vbi.Int64(), nil
 		}
 	}
