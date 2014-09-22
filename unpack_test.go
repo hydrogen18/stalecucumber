@@ -181,6 +181,22 @@ func TestUnpackIntoStructWithPointer(t *testing.T) {
 		t.Fatalf("Got %v expected %v", *dst, *expect)
 	}
 
+	//Test again w/ source having {"C": None }
+	dst.A = 0
+	dst.B = 0
+	err = UnpackInto(dst).From(
+		Unpickle(strings.NewReader("(dp0\nS'A'\np1\nI1\nsS'C'\np2\nNsS'B'\np3\nI2\ns.")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect.C = nil
+	expect.A = 1
+	expect.B = 2
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", *dst, *expect)
+	}
+
 }
 
 const inputB = "\x80\x02}q\x00(U\x01aq\x01K*U\x01cq\x02U\x06foobarq\x03U\x01bq\x04G@*\xbdp\xa3\xd7\n=U\x01eq\x05\x88U\x01dq\x06\x8a\x01\x01u."

@@ -244,10 +244,23 @@ func (u unpacker) From(srcI interface{}, err error) error {
 				}
 				continue
 			}
+
+			_, valueIsNone := kv.(PickleNone)
+
 			if fv.Kind() != reflect.Ptr {
+				if valueIsNone {
+					panic("foo")
+				}
 				fv = fv.Addr()
-			} else if fv.IsNil() {
-				fv.Set(reflect.New(fv.Type().Elem()))
+			} else {
+				if valueIsNone {
+					fv.Set(reflect.Zero(fv.Type()))
+					continue
+				}
+
+				if fv.IsNil() {
+					fv.Set(reflect.New(fv.Type().Elem()))
+				}
 			}
 
 			err := unpacker{dest: fv.Interface(),
