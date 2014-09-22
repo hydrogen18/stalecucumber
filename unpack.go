@@ -119,8 +119,11 @@ func (u unpacker) from(srcI interface{}, err error) error {
 				vElem = next
 				continue
 			}
-			vElem.Set(reflect.Zero(vElem.Type()))
-			return nil
+
+			if vElem.CanSet() {
+				vElem.Set(reflect.Zero(vElem.Type()))
+				return nil
+			}
 		}
 		return UnpackingError{Source: srcI,
 			Destination: u.dest,
