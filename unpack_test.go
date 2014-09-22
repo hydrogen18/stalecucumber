@@ -4,6 +4,29 @@ import "testing"
 import "strings"
 import "reflect"
 import "math/big"
+import "github.com/hydrogen18/stalecucumber/struct_export_test"
+
+func TestUnpackMapIntoStructHiddenField(t *testing.T) {
+
+	m := make(map[interface{}]interface{})
+	m["shouldntMessWithMe"] = 2
+
+	m = make(map[interface{}]interface{})
+	m["likewise"] = 3
+	s := struct_export_test.Struct1{}
+	err := UnpackInto(&s).From(m, nil)
+	if err == nil {
+		t.Fatal("should have failed")
+	}
+
+	m = make(map[interface{}]interface{})
+	m["likewise"] = 3
+
+	err = UnpackInto(&s).From(m, nil)
+	if err == nil {
+		t.Fatal("should have failed")
+	}
+}
 
 func TestUnpackIntIntoStruct(t *testing.T) {
 	s := struct{}{}

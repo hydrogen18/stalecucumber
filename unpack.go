@@ -6,6 +6,8 @@ import "errors"
 import "strings"
 import "math/big"
 
+const PICKLE_TAG = "pickle"
+
 type UnpackingError struct {
 	Source      interface{}
 	Destination interface{}
@@ -29,6 +31,7 @@ func (ue UnpackingError) Error() string {
 
 var ErrNilPointer = errors.New("Destination cannot be a nil pointer")
 var ErrNotPointer = errors.New("Destination must be a pointer type")
+var ErrTargetTypeOverflow = errors.New("Value overflows target type")
 
 type unpacker struct {
 	dest                  interface{}
@@ -74,14 +77,24 @@ func (u unpacker) From(srcI interface{}, err error) error {
 	switch s := srcI.(type) {
 	case int64:
 		switch vIndirect.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64:
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64, reflect.Int32:
+			if vIndirect.OverflowInt(s) {
+				return UnpackingError{Source: srcI,
+					Destination: u.dest,
+					Err:         ErrTargetTypeOverflow}
+			}
 			vIndirect.SetInt(s)
 			return nil
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint64:
-			if s >= 0 {
-				vIndirect.SetUint(uint64(s))
-				return nil
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if s < 0 || vIndirect.OverflowUint(uint64(s)) {
+				return UnpackingError{Source: srcI,
+					Destination: u.dest,
+					Err:         ErrTargetTypeOverflow}
 			}
+
+			vIndirect.SetUint(uint64(s))
+			return nil
+
 		}
 	case string:
 		switch vIndirect.Kind() {
@@ -192,7 +205,7 @@ func (u unpacker) From(srcI interface{}, err error) error {
 
 		for i := 0; i != numFields; i++ {
 			fv := vIndirectType.Field(i)
-			tag := fv.Tag.Get("pickle")
+			tag := fv.Tag.Get(PICKLE_TAG)
 
 			if len(tag) != 0 {
 				if fieldByTag == nil {
@@ -208,12 +221,19 @@ func (u unpacker) From(srcI interface{}, err error) error {
 			if fieldIndex, ok := fieldByTag[k]; ok {
 				fv = vIndirect.Field(fieldIndex)
 			} else {
-				//Capitalize the first character. Structs
-				//do not export fields with a lower case
-				//first character
-				capk := strings.ToUpper(k[0:1]) + k[1:]
+				//Try the name verbatim. This catches
+				//embedded fields as well
+				fv = vIndirect.FieldByName(k)
 
-				fv = vIndirect.FieldByName(capk)
+				if !fv.IsValid() {
+					//Capitalize the first character. Structs
+					//do not export fields with a lower case
+					//first character
+					capk := strings.ToUpper(k[0:1]) + k[1:]
+
+					fv = vIndirect.FieldByName(capk)
+				}
+
 			}
 
 			if !fv.IsValid() || !fv.CanSet() {
