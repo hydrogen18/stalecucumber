@@ -145,6 +145,9 @@ func (p *Pickler) dump(input interface{}) error {
 	case string:
 		p.dumpString(input)
 		return nil
+	case bool:
+		p.dumpBool(input)
+		return nil
 	}
 
 	v := reflect.ValueOf(input)
@@ -192,6 +195,22 @@ func (p *Pickler) dump(input interface{}) error {
 	}
 
 	return PicklingError{V: input, Err: ErrTypeNotPickleable}
+}
+
+type boolProxy bool
+
+func (proxy boolProxy) WriteTo(w io.Writer) (int, error) {
+	var opcode uint8
+	if proxy {
+		opcode = OPCODE_NEWTRUE
+	} else {
+		opcode = OPCODE_NEWFALSE
+	}
+	return 1, binary.Write(w, binary.LittleEndian, opcode)
+}
+
+func (p *Pickler) dumpBool(v bool) {
+	p.pushProxy(boolProxy(v))
 }
 
 func (p *Pickler) dumpStruct(input interface{}) error {

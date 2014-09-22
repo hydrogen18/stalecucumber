@@ -301,6 +301,16 @@ func TestPickleStruct(t *testing.T) {
 	inAndOut(example2, out, t)
 }
 
+func TestPickleBool(t *testing.T) {
+	var b bool
+
+	roundTrip(b, t)
+
+	b = true
+
+	roundTrip(b, t)
+}
+
 func inAndUnpack(v interface{}, t *testing.T) {
 	buf := &bytes.Buffer{}
 
