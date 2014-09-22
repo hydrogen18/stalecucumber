@@ -32,6 +32,10 @@ func TestPickleFloat64(t *testing.T) {
 	roundTrip(1337.42, t)
 }
 
+func TestPickleByte(t *testing.T) {
+	inAndOut(byte(1), int64(1), t)
+}
+
 func TestPickleFloat32(t *testing.T) {
 	var f float32
 	f = 1337.42

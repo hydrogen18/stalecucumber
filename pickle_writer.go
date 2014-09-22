@@ -11,6 +11,63 @@ type pickleProxy interface {
 	WriteTo(io.Writer) (int, error)
 }
 
+/*
+This type is used to pickle data.Picklers are created
+by calling NewPickler. Each call to Pickle writes a
+complete pickle program to the underlying io.Writer object.
+
+Its safe to assign W to other values in between calls to Pickle.
+
+Failures return the underlying error or an instance of PicklingError.
+
+Data is always written using Pickle Protocol 2. This format is
+compatible with Python 2.3 and all newer version.
+
+Type Conversions
+
+Type conversion from Go types to Python types is as follows
+
+	uint8,uint16,int8,int16,int32 -> Python int
+	int,int64,uint,uint64 -> Python int if it fits, otherwise Python Long
+	string -> Python unicode
+	slices, arrays -> Python list
+	maps -> Python dict
+	bool -> Python True and False
+	big.Int -> Python Long
+	struct -> Python dict
+
+Structs are pickled using their field names unless a tag is present on the
+field specifying the name. For example
+
+	type MyType struct {
+		FirstField int
+		SecondField int `pickle:"meow"`
+	}
+
+This struct would be pickled into a dictionary with two keys: "FirstField"
+and "meow".
+
+Embedded structs are marshalled as a nested dictionary. Exported types
+are never pickled.
+
+Pickling Tuples
+
+There is no equivalent type to Python's tuples in Go. You may not need
+to use tuples at all. For example, consider the following Python code
+
+
+	a, b, c = pickle.load(data_in)
+
+This code tries to set to the variables "a", "b", and "c" from the result
+of unpickling. In this case it does not matter if the source type
+is a Python list or a Python tuple.
+
+If you really need to write tuples, call NewTuple and pass the data
+in as the arguments. This special type exists to inform stalecucumber that
+a tuple should be pickled.
+
+*/
+
 type Pickler struct {
 	W io.Writer
 

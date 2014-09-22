@@ -1,8 +1,14 @@
 /*
-This package reads pickled data written from python using the "pickle" module.
+This package reads and writes pickled data. The format is the same
+as the Python "pickle" module.
+
 Protocols 0,1,2 are implemented. These are the versions written by the Python
 2.x series. Python 3 defines newer protocol versions, but can write the older
 protocol versions so they are readable by this package.
+
+To read data, see stalecucumber.Unpickle.
+
+To write data, see stalecucumber.NewPickler.
 
 TLDR
 
@@ -38,90 +44,6 @@ Read a pickled dictionary into a structure
 
 	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
 
-Reading Data
-
-The stalecucumber.Unpickle function takes a reader and attempts to read
-a complete pickle program from it. This is normally the output of the function
-like "pickle.dump" from Python.
-
-The returned type is interface{} because unpickling can generate any type. Use
-a helper function to convert to another type without an additional type check.
-
-An error is returned if the underlying reader fails, the program
-is invalid, or unsupported opcodes are encountered. See below for the details
-of unsupported opcodes.
-
-If the version of python you are using supports protocol version 1 or 2,
-you should always specify that protocol version. By default the "pickle"
-and "cPickle" modules in Python write using protocol 0. Protocol 0
-requires much more space to represent the same values and is much
-slower to parse.
-
-Type Conversions
-
-Types conversion Python types to Go types is performed as followed
-	int -> int64
-	string -> string
-	unicode -> string
-	float -> float64
-	long -> big.Int from the "math/big" package
-	lists -> []interface{}
-	tuples -> []interface{}
-	dict -> map[interface{}]interface{}
-
-The following values are converted from Python to the Go types
-	True & False -> bool
-	None -> stalecucumber.PickleNone, sets pointers to nil
-
-Helper Functions
-
-The following helper functions were inspired by the github.com/garyburd/redigo
-package. Each function takes the result of Unpickle as its arguments. If unpickle
-fails it does nothing and returns that error. Otherwise it attempts to
-convert to the appropriate type. If type conversion fails it returns an error
-
-	String - string from Python string or unicode
-	Int - int64 from Python int or long
-	Bool - bool from Python True or False
-	Big - *big.Int from Python long
-	ListOrTuple - []interface{} from Python Tuple or List
-	Float - float64 from Python float
-	Dict - map[interface{}]interface{} from Python dictionary
-	DictString -
-		map[string]interface{} from Python dictionary.
-		Keys must all be of type unicode or string.
-
-Unpacking into structures
-
-If the pickled object is a python dictionary that has only unicode and string
-objects for keys, that object can be unpickled into a struct in Go by using
-the "UnpackInto" function. The "From" receiver on the return value accepts
-the result of "Unpickle" as its actual parameters.
-
-The keys of the python dictionary are assigned to fields in a structure.
-Structures may specify the tag "pickle" on fields. The value of this tag is taken
-as the key name of the Python dictionary value to place in this field. If no
-field has a matching "pickle" tag the fields are looked up by name. If
-the first character of the key is not uppercase, it is uppercased. If a field
-matching that name is found, the value in the python dictionary is unpacked
-into the value of the field within the structure.
-
-A list of python dictionaries can be unpickled into a slice of structures in
-Go.
-
-A homogeneous list of python values can be unpickled into a slice in
-Go with the appropriate element type.
-
-A nested python dictionary is unpickled into nested structures in Go. If a
-field is of type map[interface{}]interface{} is of course unpacked into that
-as well.
-
-By default UnpackInto skips any missing fields and fails if a field's
-type is not compatible with the object's type.
-
-This behavior can be changed by setting "AllowMissingFields" and
-"AllowMismatchedFields" on the return value of UnpackInto before calling
-From.
 
 Recursive objects
 
@@ -141,6 +63,14 @@ a reference to itself.
 
 Attempting to unpack the result of the above python code into a structure
 with UnpackInto would either fail or recurse forever.
+
+Protocol Performance
+
+If the version of Python you are using supports protocol version 1 or 2,
+you should always specify that protocol version. By default the "pickle"
+and "cPickle" modules in Python write using protocol 0. Protocol 0
+requires much more space to represent the same values and is much
+slower to parse.
 
 Unsupported Opcodes
 
@@ -241,15 +171,89 @@ var ErrNoResult = errors.New("Input did not place a value onto the stack")
 var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
 /*
-Unpickle a value from a reader. This function returns an error if
-the reader fails, the pickled data is invalid, or if the pickled data contains
-an unsupported opcode.
+Unpickle a value from a reader.
 
-See unsupported opcodes in the documentation of this package for more
-information.
-
+The returned type is interface{} because unpickling can generate any type. Use
+a helper function to convert to another type without an additional type check.
 This function is generally not used directly, but with one of the helpers
-such as string.
+such as String or Int.
+
+This function returns an error if
+the reader fails, the pickled data is invalid, or if the pickled data contains
+an unsupported opcode. See unsupported opcodes in the documentation of
+this package for more information.
+
+This function takes a reader and attempts to read
+a complete pickle program from it. This is normally the output of the function
+like "pickle.dump" from Python.
+
+Type Conversions
+
+Types conversion Python types to Go types is performed as followed
+	int -> int64
+	string -> string
+	unicode -> string
+	float -> float64
+	long -> big.Int from the "math/big" package
+	lists -> []interface{}
+	tuples -> []interface{}
+	dict -> map[interface{}]interface{}
+
+The following values are converted from Python to the Go types
+	True & False -> bool
+	None -> stalecucumber.PickleNone, sets pointers to nil
+
+Helper Functions
+
+The following helper functions were inspired by the github.com/garyburd/redigo
+package. Each function takes the result of Unpickle as its arguments. If unpickle
+fails it does nothing and returns that error. Otherwise it attempts to
+convert to the appropriate type. If type conversion fails it returns an error
+
+	String - string from Python string or unicode
+	Int - int64 from Python int or long
+	Bool - bool from Python True or False
+	Big - *big.Int from Python long
+	ListOrTuple - []interface{} from Python Tuple or List
+	Float - float64 from Python float
+	Dict - map[interface{}]interface{} from Python dictionary
+	DictString -
+		map[string]interface{} from Python dictionary.
+		Keys must all be of type unicode or string.
+
+Unpacking into structures
+
+If the pickled object is a python dictionary that has only unicode and string
+objects for keys, that object can be unpickled into a struct in Go by using
+the "UnpackInto" function. The "From" receiver on the return value accepts
+the result of "Unpickle" as its actual parameters.
+
+The keys of the python dictionary are assigned to fields in a structure.
+Structures may specify the tag "pickle" on fields. The value of this tag is taken
+as the key name of the Python dictionary value to place in this field. If no
+field has a matching "pickle" tag the fields are looked up by name. If
+the first character of the key is not uppercase, it is uppercased. If a field
+matching that name is found, the value in the python dictionary is unpacked
+into the value of the field within the structure.
+
+A list of python dictionaries can be unpickled into a slice of structures in
+Go.
+
+A homogeneous list of python values can be unpickled into a slice in
+Go with the appropriate element type.
+
+A nested python dictionary is unpickled into nested structures in Go. If a
+field is of type map[interface{}]interface{} is of course unpacked into that
+as well.
+
+By default UnpackInto skips any missing fields and fails if a field's
+type is not compatible with the object's type.
+
+This behavior can be changed by setting "AllowMissingFields" and
+"AllowMismatchedFields" on the return value of UnpackInto before calling
+From.
+
+
 */
 func Unpickle(reader io.Reader) (interface{}, error) {
 	var pm PickleMachine
