@@ -13,20 +13,6 @@ func TestPickleBadTypes(t *testing.T) {
 		PicklingError{Err: ErrTypeNotPickleable, V: c},
 		t)
 
-	var f interface{}
-
-	assertPicklingFails(f,
-		PicklingError{Err: ErrEmptyInterfaceNotPickleable, V: f},
-		t)
-
-	g := struct {
-		A interface{}
-	}{}
-
-	assertPicklingFails(g,
-		PicklingError{Err: ErrEmptyInterfaceNotPickleable, V: nil},
-		t)
-
 }
 
 func assertPicklingFails(v interface{}, expect error, t *testing.T) {
@@ -324,7 +310,40 @@ func TestPickleBigInt(t *testing.T) {
 
 	i.Mul(i, big.NewInt(-1))
 	roundTrip(i, t)
+}
 
+func TestPickleTuple(t *testing.T) {
+	myTuple := NewTuple(1, 2, "foobar")
+
+	buf := &bytes.Buffer{}
+	pickler := NewPickler(buf)
+	_, err := pickler.Pickle(myTuple)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := []interface{}{int64(1),
+		int64(2),
+		"foobar"}
+
+	//Verify it can be read back
+	inAndOut(myTuple, out, t)
+
+	myTuple = NewTuple()
+	out = []interface{}{}
+	inAndOut(myTuple, out, t)
+
+	myTuple = NewTuple("a")
+	out = []interface{}{"a"}
+	inAndOut(myTuple, out, t)
+
+	myTuple = NewTuple("a", "b")
+	out = []interface{}{"a", "b"}
+	inAndOut(myTuple, out, t)
+
+	myTuple = NewTuple("a", "b", "c", nil, "d")
+	out = []interface{}{"a", "b", "c", PickleNone{}, "d"}
+	inAndOut(myTuple, out, t)
 }
 
 func inAndUnpack(v interface{}, t *testing.T) {

@@ -9,7 +9,6 @@ import "math/big"
 
 type pickleProxy interface {
 	WriteTo(io.Writer) (int, error)
-	//V() interface{}
 }
 
 type Pickler struct {
@@ -81,7 +80,8 @@ func (pe PicklingError) Error() string {
 
 func (p *Pickler) dump(input interface{}) error {
 	if input == nil {
-		return PicklingError{V: nil, Err: ErrEmptyInterfaceNotPickleable}
+		p.pushOpcode(OPCODE_NONE)
+		return nil
 	}
 
 	switch input := input.(type) {
@@ -90,6 +90,8 @@ func (p *Pickler) dump(input interface{}) error {
 			p.dumpInt(int64(input))
 			return nil
 		}
+		p.dumpIntAsLong(int64(input))
+		return nil
 	case int64:
 		if input <= BININT_MAX && input >= BININT_MIN {
 			p.dumpInt(input)
@@ -150,6 +152,39 @@ func (p *Pickler) dump(input interface{}) error {
 		return nil
 	case big.Int:
 		p.dumpBigInt(input)
+		return nil
+	case PickleNone:
+		p.pushOpcode(OPCODE_NONE)
+		return nil
+	case PickleTuple:
+		l := len(input)
+		switch l {
+		case 0:
+			p.pushOpcode(OPCODE_EMPTY_TUPLE)
+			return nil
+		case 1, 2, 3:
+		default:
+			p.pushOpcode(OPCODE_MARK)
+		}
+
+		for _, v := range input {
+			err := p.dump(v)
+			if err != nil {
+				return err
+			}
+		}
+
+		switch l {
+		case 1:
+			p.pushOpcode(OPCODE_TUPLE1)
+		case 2:
+			p.pushOpcode(OPCODE_TUPLE2)
+		case 3:
+			p.pushOpcode(OPCODE_TUPLE3)
+		default:
+			p.pushOpcode(OPCODE_TUPLE)
+		}
+
 		return nil
 	}
 
