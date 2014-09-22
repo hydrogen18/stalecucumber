@@ -152,15 +152,14 @@ func (p *Pickler) dump(input interface{}) error {
 
 	switch vKind {
 	//Check for pointers. They can't be
-	//meaningfully written as a pickle. Dereference
+	//meaningfully written as a pickle unless nil. Dereference
 	//and recurse.
 	case reflect.Ptr:
 		if v.IsNil() {
-			return errors.New("Can't pickle nil pointer")
+			p.pushOpcode(OPCODE_NONE)
+			return nil
 		}
-		vIndirect := reflect.Indirect(v)
-		return p.dump(vIndirect)
-
+		return p.dump(v.Elem().Interface())
 	case reflect.Map:
 		p.pushOpcode(OPCODE_EMPTY_DICT)
 		p.pushOpcode(OPCODE_MARK)
@@ -192,7 +191,7 @@ func (p *Pickler) dump(input interface{}) error {
 		return p.dumpStruct(input)
 	}
 
-	return PicklingError{V: v.Interface(), Err: ErrTypeNotPickleable}
+	return PicklingError{V: input, Err: ErrTypeNotPickleable}
 }
 
 func (p *Pickler) dumpStruct(input interface{}) error {

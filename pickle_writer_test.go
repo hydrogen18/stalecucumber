@@ -249,6 +249,20 @@ func TestPickleSnowman(t *testing.T) {
 	roundTrip("This is a snowman: ☃", t)
 }
 
+func TestPicklePointer(t *testing.T) {
+	var myptr *int
+
+	myptr = new(int)
+	*myptr = 42
+
+	inAndUnpack(myptr, t)
+
+	inAndUnpack(&myptr, t)
+
+	myptr = nil
+	inAndUnpack(&myptr, t)
+}
+
 func TestPickleStruct(t *testing.T) {
 	example := struct {
 		Apple  uint64
@@ -293,7 +307,7 @@ func inAndUnpack(v interface{}, t *testing.T) {
 	p := NewPickler(buf)
 	_, err := p.Pickle(v)
 	if err != nil {
-		t.Fatalf("Failed writing type %T:%v", v, err)
+		t.Fatalf("Failed writing type %T:\n%v", v, err)
 	}
 
 	w := reflect.New(reflect.TypeOf(v))
