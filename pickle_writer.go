@@ -11,6 +11,12 @@ type pickleProxy interface {
 	WriteTo(io.Writer) (int, error)
 }
 
+type Pickler struct {
+	W io.Writer
+
+	program []pickleProxy
+}
+
 /*
 This type is used to pickle data.Picklers are created
 by calling NewPickler. Each call to Pickle writes a
@@ -63,17 +69,10 @@ of unpickling. In this case it does not matter if the source type
 is a Python list or a Python tuple.
 
 If you really need to write tuples, call NewTuple and pass the data
-in as the arguments. This special type exists to inform stalecucumber that
+in as the arguments. This special type exists to inform stalecucumber.Pickle that
 a tuple should be pickled.
 
 */
-
-type Pickler struct {
-	W io.Writer
-
-	program []pickleProxy
-}
-
 func NewPickler(writer io.Writer) *Pickler {
 	retval := &Pickler{}
 	retval.W = writer
