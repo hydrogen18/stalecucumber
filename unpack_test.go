@@ -148,6 +148,39 @@ func TestUnpackIntoStruct(t *testing.T) {
 	}
 }
 
+func TestAllowMismatchedFieldsInStruct(t *testing.T) {
+	dest := &testStruct{}
+
+	//Key "C" has value "Meow"
+	const input = "(dp0\nS'A'\np1\nI1\nsS'C'\np2\nS'Meow'\np3\nsS'B'\np4\nI2\ns."
+
+	err := UnpackInto(dest).From(Unpickle(strings.NewReader(input)))
+	if err == nil {
+		t.Fatal("Should fail")
+	}
+	unpackErr := err.(UnpackingError)
+
+	expectErr := ErrTargetTypeMismatch
+	if expectErr != unpackErr.Err {
+		t.Fatalf("Wrong error:%v", err)
+	}
+
+	expect := &testStruct{A: 1, B: 2, C: 0}
+	dest.C = 133000
+
+	unpacker := UnpackInto(dest)
+	unpacker.AllowMismatchedFields = true
+	err = unpacker.From(Unpickle(strings.NewReader(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expect, dest) {
+		t.Fatalf("Got %v expected %v", *dest, *expect)
+	}
+
+}
+
 func TestUnpackIntoStructWithPointer(t *testing.T) {
 	dst := &testStructWithPointer{}
 	expect := &testStructWithPointer{
@@ -208,6 +241,23 @@ func TestUnpackIntoStructWithPointer(t *testing.T) {
 		Source:      PickleNone{}}
 	if !reflect.DeepEqual(err, expectedError) {
 		t.Fatalf("\n%v\n%v\n", err, expectedError)
+	}
+
+	//test again w/ C being non pointer type, but allow
+	//mismatched fields
+	dstWithoutPointer.A = 1000
+	dstWithoutPointer.B = 2000
+	dstWithoutPointer.C = 3000
+	unpacker := UnpackInto(dstWithoutPointer)
+	unpacker.AllowMismatchedFields = true
+	err = unpacker.From(Unpickle(strings.NewReader(inputCAsNone)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectWithoutPointer := &testStruct{A: 1, B: 2, C: 0}
+
+	if !reflect.DeepEqual(dstWithoutPointer, expectWithoutPointer) {
+		t.Fatalf("Got %v expected %v", *dstWithoutPointer, *expectWithoutPointer)
 	}
 
 	//test with C being arbitrarily deep pointer type

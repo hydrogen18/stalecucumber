@@ -53,6 +53,7 @@ var ErrNilPointer = errors.New("Destination cannot be a nil pointer")
 var ErrNotPointer = errors.New("Destination must be a pointer type")
 var ErrTargetTypeNotPointer = errors.New("Target type must be a pointer to unpack this value")
 var ErrTargetTypeOverflow = errors.New("Value overflows target type")
+var ErrTargetTypeMismatch = errors.New("Target type does not match source type")
 
 type unpacker struct {
 	dest                  reflect.Value
@@ -72,14 +73,10 @@ func (u unpacker) From(srcI interface{}, err error) error {
 		return err
 	}
 
-	return u.from(srcI, nil)
+	return u.from(srcI)
 }
 
-func (u unpacker) from(srcI interface{}, err error) error {
-	//Check if an error occurred
-	if err != nil {
-		return err
-	}
+func (u unpacker) from(srcI interface{}) error {
 
 	//Get the value of the destination
 	v := u.dest
@@ -111,6 +108,10 @@ func (u unpacker) from(srcI interface{}, err error) error {
 
 	//Check the input against known types
 	switch s := srcI.(type) {
+	default:
+		return UnpackingError{Source: srcI,
+			Destination: u.dest,
+			Err:         errors.New("Unknown source type")}
 	case PickleNone:
 		vElem := v.Elem()
 		for vElem.Kind() == reflect.Ptr {
@@ -125,6 +126,7 @@ func (u unpacker) from(srcI interface{}, err error) error {
 				return nil
 			}
 		}
+
 		return UnpackingError{Source: srcI,
 			Destination: u.dest,
 			Err:         ErrTargetTypeNotPointer}
@@ -231,6 +233,7 @@ func (u unpacker) from(srcI interface{}, err error) error {
 		}
 
 		var src map[string]interface{}
+		var err error
 		src, err = DictString(srcI, err)
 		if err != nil {
 			return UnpackingError{Source: srcI,
@@ -293,9 +296,22 @@ func (u unpacker) from(srcI interface{}, err error) error {
 
 			err := unpacker{dest: fv.Addr(),
 				AllowMismatchedFields: u.AllowMismatchedFields,
-				AllowMissingFields:    u.AllowMissingFields}.From(kv, nil)
+				AllowMissingFields:    u.AllowMissingFields}.from(kv)
 
-			if err != nil && !u.AllowMismatchedFields {
+			if err != nil {
+				if u.AllowMismatchedFields {
+					if unpackingError, ok := err.(UnpackingError); ok {
+						switch unpackingError.Err {
+						case ErrTargetTypeOverflow,
+							ErrTargetTypeNotPointer,
+							ErrTargetTypeMismatch:
+
+							fv.Set(reflect.Zero(fv.Type()))
+							continue
+						}
+
+					}
+				}
 				return err
 			}
 		}
@@ -305,5 +321,5 @@ func (u unpacker) from(srcI interface{}, err error) error {
 
 	return UnpackingError{Source: srcI,
 		Destination: u.dest,
-		Err:         fmt.Errorf("Cannot unpack")}
+		Err:         ErrTargetTypeMismatch}
 }
