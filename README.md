@@ -1,6 +1,8 @@
 #stalecucumber
 
-This package reads pickled data written from python using the "pickle" module.
+This package reads and writes pickled data. The format is the same
+as the Python "pickle" module.
+
 Protocols 0,1,2 are implemented. These are the versions written by the Python
 2.x series. Python 3 defines newer protocol versions, but can write the older
 protocol versions so they are readable by this package.
@@ -47,4 +49,17 @@ mystruct := struct{
 	Dog float32}{}
 
 err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
+```
+
+Pickle a struct
+
+```
+buf := new(bytes.Buffer)
+mystruct := struct{
+		Apple int
+		Banana uint
+		Cat string
+		Dog float32}{}
+
+err := stalecucumber.NewPickler(buf).Pickle(mystruct)
 ```

@@ -44,6 +44,18 @@ Read a pickled dictionary into a structure
 
 	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
 
+Pickle a structure
+
+	buf := new(bytes.Buffer)
+	mystruct := struct{
+			Apple int
+			Banana uint
+			Cat string
+			Dog float32}{}
+
+	err := stalecucumber.NewPickler(buf).Pickle(mystruct)
+
+
 
 Recursive objects
 
@@ -171,21 +183,17 @@ var ErrNoResult = errors.New("Input did not place a value onto the stack")
 var ErrMarkNotFound = errors.New("Mark could not be found on the stack")
 
 /*
-Unpickle a value from a reader.
+Unpickle a value from a reader. This function takes a reader and
+attempts to read a complete pickle program from it. This is normally
+the output of the function "pickle.dump" from Python.
 
 The returned type is interface{} because unpickling can generate any type. Use
 a helper function to convert to another type without an additional type check.
-This function is generally not used directly, but with one of the helpers
-such as String or Int.
 
 This function returns an error if
 the reader fails, the pickled data is invalid, or if the pickled data contains
 an unsupported opcode. See unsupported opcodes in the documentation of
 this package for more information.
-
-This function takes a reader and attempts to read
-a complete pickle program from it. This is normally the output of the function
-like "pickle.dump" from Python.
 
 Type Conversions
 
@@ -243,7 +251,7 @@ A homogeneous list of python values can be unpickled into a slice in
 Go with the appropriate element type.
 
 A nested python dictionary is unpickled into nested structures in Go. If a
-field is of type map[interface{}]interface{} is of course unpacked into that
+field is of type map[interface{}]interface{} it is of course unpacked into that
 as well.
 
 By default UnpackInto skips any missing fields and fails if a field's
@@ -252,7 +260,6 @@ type is not compatible with the object's type.
 This behavior can be changed by setting "AllowMissingFields" and
 "AllowMismatchedFields" on the return value of UnpackInto before calling
 From.
-
 
 */
 func Unpickle(reader io.Reader) (interface{}, error) {
