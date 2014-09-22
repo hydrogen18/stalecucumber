@@ -71,7 +71,7 @@ Types conversion Python types to Go types is performed as followed
 
 The following values are converted from Python to the Go types
 	True & False -> bool
-	None -> stalecucumber.PickleNone
+	None -> stalecucumber.PickleNone, sets pointers to nil
 
 Helper Functions
 
