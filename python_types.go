@@ -8,7 +8,15 @@ is needed only internally.
 */
 type PickleMark struct{}
 
+func (_ PickleMark) String() string {
+	return "PickleMachine Mark"
+}
+
 /*
 This type is used to represent the Python object "None"
 */
 type PickleNone struct{}
+
+func (_ PickleNone) String() string {
+	return "Python None"
+}

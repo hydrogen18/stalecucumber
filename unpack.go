@@ -10,7 +10,7 @@ const PICKLE_TAG = "pickle"
 
 type UnpackingError struct {
 	Source      interface{}
-	Destination interface{}
+	Destination reflect.Value
 	Err         error
 }
 
@@ -21,26 +21,47 @@ on the result of "UnpackInto" controls if this error is
 returned or not.
 */
 func (ue UnpackingError) Error() string {
-	return fmt.Sprintf("Error unpacking %v(%T) into %v(%T):%v",
+	var dv string
+	var dt string
+	k := ue.Destination.Kind()
+	switch k {
+	case reflect.Ptr:
+		dt = fmt.Sprintf("%s", ue.Destination.Type().Elem())
+		if !ue.Destination.IsNil() {
+			dv = fmt.Sprintf("%v", ue.Destination.Elem().Interface())
+		} else {
+			dv = "nil"
+
+		}
+	case reflect.Invalid:
+		dv = "invalid"
+		dt = dv
+	default:
+		dv = fmt.Sprintf("%v", ue.Destination.Interface())
+		dt = fmt.Sprintf("%s", ue.Destination.Type())
+	}
+
+	return fmt.Sprintf("Error unpacking %v(%T) into %s(%s):%v",
 		ue.Source,
 		ue.Source,
-		ue.Destination,
-		ue.Destination,
+		dv,
+		dt,
 		ue.Err)
 }
 
 var ErrNilPointer = errors.New("Destination cannot be a nil pointer")
 var ErrNotPointer = errors.New("Destination must be a pointer type")
+var ErrTargetTypeNotPointer = errors.New("Target type must be a pointer to unpack this value")
 var ErrTargetTypeOverflow = errors.New("Value overflows target type")
 
 type unpacker struct {
-	dest                  interface{}
+	dest                  reflect.Value
 	AllowMissingFields    bool
 	AllowMismatchedFields bool
 }
 
 func UnpackInto(dest interface{}) unpacker {
-	return unpacker{dest: dest,
+	return unpacker{dest: reflect.ValueOf(dest),
 		AllowMissingFields:    true,
 		AllowMismatchedFields: false}
 }
@@ -51,8 +72,17 @@ func (u unpacker) From(srcI interface{}, err error) error {
 		return err
 	}
 
+	return u.from(srcI, nil)
+}
+
+func (u unpacker) from(srcI interface{}, err error) error {
+	//Check if an error occurred
+	if err != nil {
+		return err
+	}
+
 	//Get the value of the destination
-	v := reflect.ValueOf(u.dest)
+	v := u.dest
 
 	//The destination must always be a pointer
 	if v.Kind() != reflect.Ptr {
@@ -71,10 +101,31 @@ func (u unpacker) From(srcI interface{}, err error) error {
 
 	//Indirect the destination. This gets the actual
 	//value pointed at
-	vIndirect := reflect.Indirect(v)
+	vIndirect := v
+	for vIndirect.Kind() == reflect.Ptr {
+		if vIndirect.IsNil() {
+			vIndirect.Set(reflect.New(vIndirect.Type().Elem()))
+		}
+		vIndirect = vIndirect.Elem()
+	}
 
 	//Check the input against known types
 	switch s := srcI.(type) {
+	case PickleNone:
+		vElem := v.Elem()
+		for vElem.Kind() == reflect.Ptr {
+			next := vElem.Elem()
+			if next.Kind() == reflect.Ptr {
+				vElem = next
+				continue
+			}
+			vElem.Set(reflect.Zero(vElem.Type()))
+			return nil
+		}
+		return UnpackingError{Source: srcI,
+			Destination: u.dest,
+			Err:         ErrTargetTypeNotPointer}
+
 	case int64:
 		switch vIndirect.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int64, reflect.Int32:
@@ -117,12 +168,12 @@ func (u unpacker) From(srcI interface{}, err error) error {
 	case *big.Int:
 		dstBig, ok := vIndirect.Addr().Interface().(*big.Int)
 		if ok {
-			(dstBig).Set(s)
+			dstBig.Set(s)
 			return nil
 		}
 
 		if vi, err := Int(srcI, nil); err == nil {
-			return unpacker{dest: v.Interface(),
+			return unpacker{dest: v,
 				AllowMismatchedFields: u.AllowMismatchedFields,
 				AllowMissingFields:    u.AllowMissingFields}.From(vi, nil)
 		}
@@ -147,21 +198,8 @@ func (u unpacker) From(srcI interface{}, err error) error {
 		for i, srcV := range s {
 			dstV := replacement.Index(i)
 
-			//Check if the slice element type is
-			//a pointer.
-			if dstV.Kind() != reflect.Ptr {
-				//If not a pointer, then indirect the
-				//value here
-				dstV = dstV.Addr()
-			} else {
-				//If it is a pointer, check for being nil.
-				//Allocate a structure if it is nil
-				if dstV.IsNil() {
-					dstV.Set(reflect.New(dstV.Type().Elem()))
-				}
-			}
 			//Recurse to set the value
-			err := unpacker{dest: dstV.Interface(),
+			err := unpacker{dest: dstV.Addr(),
 				AllowMissingFields:    u.AllowMissingFields,
 				AllowMismatchedFields: u.AllowMismatchedFields}.
 				From(srcV, nil)
@@ -245,25 +283,7 @@ func (u unpacker) From(srcI interface{}, err error) error {
 				continue
 			}
 
-			_, valueIsNone := kv.(PickleNone)
-
-			if fv.Kind() != reflect.Ptr {
-				if valueIsNone {
-					panic("foo")
-				}
-				fv = fv.Addr()
-			} else {
-				if valueIsNone {
-					fv.Set(reflect.Zero(fv.Type()))
-					continue
-				}
-
-				if fv.IsNil() {
-					fv.Set(reflect.New(fv.Type().Elem()))
-				}
-			}
-
-			err := unpacker{dest: fv.Interface(),
+			err := unpacker{dest: fv.Addr(),
 				AllowMismatchedFields: u.AllowMismatchedFields,
 				AllowMissingFields:    u.AllowMissingFields}.From(kv, nil)
 

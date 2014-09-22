@@ -182,10 +182,11 @@ func TestUnpackIntoStructWithPointer(t *testing.T) {
 	}
 
 	//Test again w/ source having {"C": None }
+	const inputCAsNone = "(dp0\nS'A'\np1\nI1\nsS'C'\np2\nNsS'B'\np3\nI2\ns."
 	dst.A = 0
 	dst.B = 0
 	err = UnpackInto(dst).From(
-		Unpickle(strings.NewReader("(dp0\nS'A'\np1\nI1\nsS'C'\np2\nNsS'B'\np3\nI2\ns.")))
+		Unpickle(strings.NewReader(inputCAsNone)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +198,53 @@ func TestUnpackIntoStructWithPointer(t *testing.T) {
 		t.Fatalf("Got %v expected %v", *dst, *expect)
 	}
 
+	//test with C being a non pointer type
+	dstWithoutPointer := &testStruct{}
+	err = UnpackInto(dstWithoutPointer).From(
+		Unpickle(strings.NewReader(inputCAsNone)))
+
+	expectedError := UnpackingError{Err: ErrTargetTypeNotPointer,
+		Destination: reflect.ValueOf(&dstWithoutPointer.C),
+		Source:      PickleNone{}}
+	if !reflect.DeepEqual(err, expectedError) {
+		t.Fatalf("\n%v\n%v\n", err, expectedError)
+	}
+
+	//test with C being arbitrarily deep pointer type
+	dstWithManyPointers := &testStructWithDeepPointers{}
+	err = UnpackInto(dstWithManyPointers).From(
+		Unpickle(strings.NewReader(inputCAsNone)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectWithManyPointers := &testStructWithDeepPointers{
+		A: 1,
+		B: 2,
+		C: dstWithManyPointers.C,
+	}
+	if !reflect.DeepEqual(dstWithManyPointers, expectWithManyPointers) {
+		t.Fatalf("Got %v expected %v", *dstWithManyPointers, *expectWithManyPointers)
+	}
+
+	const EXPECTED_DEPTH = 8
+	depth := 0
+	v := reflect.ValueOf(dstWithManyPointers.C)
+
+	for v.Kind() == reflect.Ptr {
+		depth++
+		v = v.Elem()
+	}
+
+	if depth != EXPECTED_DEPTH {
+		t.Fatal("wrong depth")
+	}
+
+}
+
+type testStructWithDeepPointers struct {
+	A int
+	B int
+	C ********int
 }
 
 const inputB = "\x80\x02}q\x00(U\x01aq\x01K*U\x01cq\x02U\x06foobarq\x03U\x01bq\x04G@*\xbdp\xa3\xd7\n=U\x01eq\x05\x88U\x01dq\x06\x8a\x01\x01u."
