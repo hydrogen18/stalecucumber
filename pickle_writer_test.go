@@ -311,6 +311,22 @@ func TestPickleBool(t *testing.T) {
 	roundTrip(b, t)
 }
 
+func TestPickleBigInt(t *testing.T) {
+	i := big.NewInt(1)
+	i.Lsh(i, 42)
+
+	roundTrip(i, t)
+
+	i.SetUint64(1)
+	i.Lsh(i, 256*8)
+
+	roundTrip(i, t)
+
+	i.Mul(i, big.NewInt(-1))
+	roundTrip(i, t)
+
+}
+
 func inAndUnpack(v interface{}, t *testing.T) {
 	buf := &bytes.Buffer{}
 

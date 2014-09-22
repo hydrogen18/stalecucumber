@@ -148,6 +148,9 @@ func (p *Pickler) dump(input interface{}) error {
 	case bool:
 		p.dumpBool(input)
 		return nil
+	case big.Int:
+		p.dumpBigInt(input)
+		return nil
 	}
 
 	v := reflect.ValueOf(input)
@@ -197,20 +200,12 @@ func (p *Pickler) dump(input interface{}) error {
 	return PicklingError{V: input, Err: ErrTypeNotPickleable}
 }
 
-type boolProxy bool
-
-func (proxy boolProxy) WriteTo(w io.Writer) (int, error) {
-	var opcode uint8
-	if proxy {
-		opcode = OPCODE_NEWTRUE
-	} else {
-		opcode = OPCODE_NEWFALSE
-	}
-	return 1, binary.Write(w, binary.LittleEndian, opcode)
-}
-
 func (p *Pickler) dumpBool(v bool) {
-	p.pushProxy(boolProxy(v))
+	if v {
+		p.pushOpcode(OPCODE_NEWTRUE)
+	} else {
+		p.pushOpcode(OPCODE_NEWFALSE)
+	}
 }
 
 func (p *Pickler) dumpStruct(input interface{}) error {
@@ -269,8 +264,12 @@ type bigIntProxy struct {
 	v *big.Int
 }
 
+var zeroPad = []byte{0}
+var maxPad = []byte{0xff}
+
 func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 	var negative = proxy.v.Sign() == -1
+	var raw []byte
 	if negative {
 		offset := big.NewInt(1)
 
@@ -279,16 +278,24 @@ func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 		bitLen += 8 - remainder
 
 		offset.Lsh(offset, bitLen)
-		proxy.v.Add(proxy.v, offset)
+
+		offset.Add(proxy.v, offset)
+
+		raw = offset.Bytes()
+	} else {
+		raw = proxy.v.Bytes()
 	}
 
-	raw := proxy.v.Bytes()
-
+	var pad []byte
+	var padL int
 	var highBitSet = (raw[0] & 0x80) != 0
+
 	if negative && !highBitSet {
-		raw = append([]byte{0xff}, raw...)
+		pad = maxPad
+		padL = 1
 	} else if !negative && highBitSet {
-		raw = append([]byte{0x00}, raw...)
+		pad = zeroPad
+		padL = 1
 	}
 
 	l := len(raw)
@@ -299,10 +306,16 @@ func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 			Length uint8
 		}{
 			OPCODE_LONG1,
-			uint8(l),
+			uint8(l + padL),
 		}
 	} else {
-		return 0, errors.New("Way too long")
+		header = struct {
+			Opcode uint8
+			Length uint32
+		}{
+			OPCODE_LONG4,
+			uint32(l + padL),
+		}
 	}
 
 	err := binary.Write(w, binary.LittleEndian, header)
@@ -312,6 +325,7 @@ func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 
 	n := binary.Size(header)
 	n += l
+	n += padL
 
 	reversed := make([]byte, l)
 
@@ -320,11 +334,21 @@ func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 	}
 
 	_, err = w.Write(reversed)
+	if err != nil {
+		return n, err
+	}
+
+	_, err = w.Write(pad)
+
 	return n, err
 }
 
 func (p *Pickler) dumpIntAsLong(v int64) {
 	p.pushProxy(bigIntProxy{big.NewInt(v)})
+}
+
+func (p *Pickler) dumpBigInt(v big.Int) {
+	p.pushProxy(bigIntProxy{&v}) //Note that this is a shallow copy
 }
 
 func (p *Pickler) dumpUintAsLong(v uint64) {
