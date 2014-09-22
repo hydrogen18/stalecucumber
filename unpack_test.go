@@ -489,6 +489,20 @@ func TestUnpackSliceOfInts(t *testing.T) {
 	if !reflect.DeepEqual(dst, expect) {
 		t.Fatalf("Got %v expected %v", dst, expect)
 	}
+
+	//Test that slices are re used and trimmed when needed
+	for i := range dst {
+		dst[i] = -1
+	}
+	dst = append(dst, 42)
+	err = UnpackInto(&dst).From(Unpickle(strings.NewReader(inputF)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(dst, expect) {
+		t.Fatalf("Got %v expected %v", dst, expect)
+	}
 }
 
 const inputG = "(lp0\nS'foo'\np1\naVbar\np2\naS'qux'\np3\na."

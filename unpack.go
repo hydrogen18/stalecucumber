@@ -192,8 +192,13 @@ func (u unpacker) from(srcI interface{}, err error) error {
 		}
 
 		//Build the value using reflection
-		replacement := reflect.MakeSlice(vIndirect.Type(),
-			len(s), len(s))
+		var replacement reflect.Value
+		if vIndirect.IsNil() || vIndirect.Len() < len(s) {
+			replacement = reflect.MakeSlice(vIndirect.Type(),
+				len(s), len(s))
+		} else {
+			replacement = vIndirect.Slice(0, len(s))
+		}
 
 		for i, srcV := range s {
 			dstV := replacement.Index(i)
