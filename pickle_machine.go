@@ -44,7 +44,7 @@ Read a pickled dictionary into a structure
 
 	err := stalecucumber.UnpackInto(&mystruct).From(stalecucumber.Unpickle(somePickledData))
 
-Pickle a structure
+Pickle a struct
 
 	buf := new(bytes.Buffer)
 	mystruct := struct{
