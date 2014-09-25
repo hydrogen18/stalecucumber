@@ -602,5 +602,19 @@ func TestUnpackHeterogeneousList(t *testing.T) {
 	if !ok && i == 42 {
 		t.Fatalf("Failed on wrong value %v(%T)", upe.Source, upe.Source)
 	}
+}
 
+func TestUnpackIntInStructIntoBigInt(t *testing.T) {
+	dst := struct {
+		V *big.Int
+	}{}
+
+	const input = "(dp0\nS'V'\np1\nI1\ns."
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dst.V == nil || dst.V.Int64() != 1 {
+		t.Fatal(dst.V)
+	}
 }

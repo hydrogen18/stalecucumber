@@ -150,8 +150,14 @@ func (u unpacker) from(srcI interface{}) error {
 
 			vIndirect.SetUint(uint64(s))
 			return nil
-
 		}
+
+		dstBig, ok := vIndirect.Addr().Interface().(*big.Int)
+		if ok {
+			dstBig.SetInt64(s)
+			return nil
+		}
+
 	case string:
 		switch vIndirect.Kind() {
 		case reflect.String:
