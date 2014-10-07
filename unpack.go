@@ -292,7 +292,7 @@ func (u unpacker) from(srcI interface{}) error {
 			}
 
 			if !fv.IsValid() || !fv.CanSet() {
-				if !u.AllowMismatchedFields {
+				if !u.AllowMissingFields {
 					return UnpackingError{Source: src,
 						Destination: u.dest,
 						Err:         fmt.Errorf("Cannot find field for key %q", k)}
