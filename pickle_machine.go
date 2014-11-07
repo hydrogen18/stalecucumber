@@ -462,6 +462,32 @@ func (pm *PickleMachine) readFixedLengthString(l int64) (string, error) {
 	return pm.buf.String(), nil
 }
 
+func (pm *PickleMachine) readBytes() ([]byte, error) {
+	pm.buf.Reset()
+	for {
+		var v [1]byte
+		n, err := pm.Reader.Read(v[:])
+		if n != 1 {
+			return nil, ErrInputTruncated
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if v[0] == '\n' {
+			break
+		}
+		pm.buf.WriteByte(v[0])
+	}
+
+	//Avoid getting "<nil>"
+	if pm.buf.Len() == 0 {
+		return []byte{}, nil
+	}
+	return pm.buf.Bytes(), nil
+
+}
+
 func (pm *PickleMachine) readString() (string, error) {
 	pm.buf.Reset()
 	for {

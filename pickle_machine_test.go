@@ -5,6 +5,8 @@ import "strings"
 import "math/big"
 import "reflect"
 import "fmt"
+import "bytes"
+import "unicode/utf8"
 
 func testString(t *testing.T, input string, expect string) {
 	reader := strings.NewReader(input)
@@ -17,6 +19,54 @@ func testString(t *testing.T, input string, expect string) {
 
 	if result != expect {
 		t.Fatalf("Got %q(%T) expected %q(%T)", result, result, expect, expect)
+	}
+
+}
+
+func TestJorilxUnicodeString(t *testing.T) {
+	input := []byte{0x56, 0xE0, 0x0A, // Và
+		0x70, 0x30, 0x0A, // p0
+		0x2E} // .
+	reader := bytes.NewReader(input)
+	unpickled, err := String(Unpickle(reader))
+	const EXPECT = `à`
+	if err != nil {
+		t.Fatal(err)
+	}
+	if utf8.RuneCountInString(unpickled) != 1 {
+		t.Errorf("wrong length string unpacked %d,%q", utf8.RuneCountInString(unpickled), unpickled)
+	}
+
+	if unpickled != EXPECT {
+		t.Errorf("Expected %q got %q", EXPECT, unpickled)
+	}
+
+	inputProtocol2 := strings.NewReader("\x80\x02X\x02\x00\x00\x00\xc3\xa0q\x00.")
+
+	unpickled, err = String(Unpickle(inputProtocol2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if utf8.RuneCountInString(unpickled) != 1 {
+		t.Errorf("wrong length string unpacked %d,%q", utf8.RuneCountInString(unpickled), unpickled)
+	}
+
+	if unpickled != EXPECT {
+		t.Errorf("Expected %q got %q", EXPECT, unpickled)
+	}
+
+	const EXPECT_SNOWMAN = "à ☃"
+
+	const inputWithSnowman = "\x56\xe0\x20\x5c\x75\x32\x36\x30\x33\x0a\x70\x30\x0a\x2e"
+
+	unpickled, err = String(Unpickle(strings.NewReader(inputWithSnowman)))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if unpickled != EXPECT_SNOWMAN {
+		t.Errorf("Expected %q got %q", EXPECT_SNOWMAN, unpickled)
 	}
 
 }

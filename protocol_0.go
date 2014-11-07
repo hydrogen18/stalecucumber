@@ -4,6 +4,9 @@ import "strconv"
 import "fmt"
 import "math/big"
 
+//import "unicode/utf8"
+import "unicode/utf16"
+
 /**
 Opcode: INT
 Push an integer or bool.
@@ -106,7 +109,7 @@ Stack before: []
 Stack after: [str]
 **/
 
-var unquoteInputs = []byte{0x0, 0x27, 0x22}
+var unquoteInputs = []byte{0x27, 0x22, 0x0}
 
 func (pm *PickleMachine) opcode_STRING() error {
 	str, err := pm.readString()
@@ -174,35 +177,52 @@ Stack before: []
 Stack after: [unicode]
 **/
 func (pm *PickleMachine) opcode_UNICODE() error {
-	str, err := pm.readString()
+	str, err := pm.readBytes()
 	if err != nil {
 		return err
 	}
 
-	v := str
+	f := make([]rune, 0, len(str))
 
-	f := make([]rune, 0, len(v))
+	var total int
+	var consumed int
+	total = len(str)
+	for total != consumed {
+		h := str[consumed]
 
-	for len(v) != 0 {
+		//Python 'raw-unicode-escape' doesnt
+		//escape extended ascii
+		if h > 127 {
+			ea := utf16.Decode([]uint16{uint16(h)})
+			f = append(f, ea...)
+			consumed += 1
+			continue
+		}
+
+		//Multibyte unicode points are escaped
+		//so use "UnquoteChar" to handle those
 		var vr rune
-		var replacement string
 		for _, i := range unquoteInputs {
-			vr, _, replacement, err = strconv.UnquoteChar(v, i)
+			pre := string(str[consumed:])
+			var post string
+			vr, _, post, err = strconv.UnquoteChar(pre, i)
 			if err == nil {
+				consumed += len(pre) - len(post)
 				break
 			}
+
 		}
 
 		if err != nil {
-			c := v[0]
+			c := str[0]
 			return fmt.Errorf("Read thus far %q. Failed to unquote character %c error:%v", string(f), c, err)
 		}
-		v = replacement
 
 		f = append(f, vr)
 	}
 
 	pm.push(string(f))
+
 	return nil
 }
 
