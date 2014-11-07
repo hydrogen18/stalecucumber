@@ -285,10 +285,8 @@ func (u unpacker) from(srcI interface{}) error {
 					//do not export fields with a lower case
 					//first character
 					capk := strings.ToUpper(k[0:1]) + k[1:]
-
 					fv = vIndirect.FieldByName(capk)
 				}
-
 			}
 
 			if !fv.IsValid() || !fv.CanSet() {

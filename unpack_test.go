@@ -11,18 +11,22 @@ func TestUnpackMapIntoStructHiddenField(t *testing.T) {
 	m := make(map[interface{}]interface{})
 	m["shouldntMessWithMe"] = 2
 
-	m = make(map[interface{}]interface{})
-	m["likewise"] = 3
 	s := struct_export_test.Struct1{}
-	err := UnpackInto(&s).From(m, nil)
+	unpacker := UnpackInto(&s)
+	unpacker.AllowMissingFields = false
+	unpacker.AllowMismatchedFields = false
+	err := unpacker.From(m, nil)
 	if err == nil {
 		t.Fatal("should have failed")
 	}
 
 	m = make(map[interface{}]interface{})
 	m["likewise"] = 3
+	unpacker = UnpackInto(&s)
+	unpacker.AllowMissingFields = false
+	unpacker.AllowMismatchedFields = false
 
-	err = UnpackInto(&s).From(m, nil)
+	err = unpacker.From(m, nil)
 	if err == nil {
 		t.Fatal("should have failed")
 	}
