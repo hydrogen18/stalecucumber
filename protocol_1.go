@@ -299,10 +299,6 @@ func (pm *PickleMachine) opcode_SETITEMS() error {
 	}
 
 	pm.popAfterIndex(markIndex)
-	/**
-	if err != nil {
-		return err
-	}**/
 
 	return nil
 }
