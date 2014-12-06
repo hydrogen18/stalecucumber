@@ -266,6 +266,7 @@ func Unpickle(reader io.Reader) (interface{}, error) {
 	var pm PickleMachine
 	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
+	pm.lastMark = -1
 
 	err := (&pm).execute()
 	if err != nil {
@@ -307,6 +308,7 @@ type PickleMachine struct {
 
 	currentOpcode uint8
 	buf           *bytes.Buffer
+	lastMark      int
 }
 
 func (pme PickleMachineError) Error() string {
@@ -334,8 +336,6 @@ func (pm *PickleMachine) execute() error {
 		err = jumpList[int(opcode)](pm)
 		if err == ErrOpcodeStopped {
 			return nil
-		} else if err == ErrOpcodeNotImplemented {
-			return pm.error(ErrOpcodeNotImplemented)
 		} else if err != nil {
 			return pm.error(err)
 		}
@@ -428,6 +428,16 @@ func (pm *PickleMachine) putMemo(index int, v interface{}) {
 }
 
 func (pm *PickleMachine) findMark() (int, error) {
+	if pm.lastMark != -1 {
+		mark := pm.lastMark
+		pm.lastMark = -1
+		if mark < len(pm.Stack) {
+			if _, ok := pm.Stack[mark].(PickleMark); ok {
+				return mark, nil
+			}
+		}
+	}
+
 	for i := len(pm.Stack) - 1; i != -1; i-- {
 		if _, ok := pm.Stack[i].(PickleMark); ok {
 			return i, nil

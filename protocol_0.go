@@ -457,6 +457,7 @@ Stack before: []
 Stack after: [mark]
 **/
 func (pm *PickleMachine) opcode_MARK() error {
+	pm.lastMark = len(pm.Stack)
 	pm.push(PickleMark{})
 	return nil
 }

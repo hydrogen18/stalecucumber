@@ -6,6 +6,80 @@ import "reflect"
 import "math/big"
 import "github.com/hydrogen18/stalecucumber/struct_export_test"
 
+func BenchmarkUnpickleInt(b *testing.B) {
+	const protocol2Int = "\x80\x02K*."
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2Int))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleLong(b *testing.B) {
+	const protocol2Long = "\x80\x02\x8a\x01*."
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2Long))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleShortString(b *testing.B) {
+	const protocol2String = "\x80\x02U\x0bHelloPickleq\x00."
+
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2String))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleLongString(b *testing.B) {
+	const protocol2String = "\x80\x02UnHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleHelloPickleq\x00."
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2String))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleFloat(b *testing.B) {
+	const protocol2Float = "\x80\x02G@E\x00\x00\x00\x00\x00\x00."
+
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2Float))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleListOfInts(b *testing.B) {
+	const protocol2ListOfInts = "\x80\x02]q\x00(K\x00K\x01K\x02K\x03K\x04K\x05K\x06K\x07K\x08K\te."
+
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2ListOfInts))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func BenchmarkUnpickleDict(b *testing.B) {
+	const protocol2Dict = "\x80\x02}q\x00(U\x01aq\x01K\x01U\x01cq\x02U\x05threeq\x03U\x01bq\x04G@\x00\x00\x00\x00\x00\x00\x00U\x01dq\x05\x8a\x01\x04u."
+
+	for i := 0; i != b.N; i++ {
+		_, err := Unpickle(strings.NewReader(protocol2Dict))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func TestUnpackMapIntoStructHiddenField(t *testing.T) {
 
 	m := make(map[interface{}]interface{})

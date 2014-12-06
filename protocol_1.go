@@ -286,18 +286,14 @@ func (pm *PickleMachine) opcode_SETITEMS() error {
 		return fmt.Errorf("Opcode DICT expected type %T on stack but found %v(%T)", v, vI, vI)
 	}
 
-	var key interface{}
-	for i := markIndex + 1; i != len(pm.Stack); i++ {
-		if key == nil {
-			key = pm.Stack[i]
-		} else {
-			v[key] = pm.Stack[i]
-			key = nil
-		}
+	if ((len(pm.Stack) - markIndex + 1) % 2) != 0 {
+		return fmt.Errorf("Found odd number of items on stack after mark:%d", len(pm.Stack)-markIndex)
 	}
 
-	if key != nil {
-		return fmt.Errorf("For opcode DICT stack after mark contained an odd number of items, this is not valid")
+	for i := markIndex + 1; i != len(pm.Stack); i++ {
+		key := pm.Stack[i]
+		i++
+		v[key] = pm.Stack[i]
 	}
 
 	err = pm.popAfterIndex(markIndex)
@@ -408,7 +404,6 @@ func (pm *PickleMachine) opcode_BINPUT() error {
 	}
 
 	pm.storeMemo(int64(index), v)
-
 	return nil
 }
 
