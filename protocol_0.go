@@ -315,10 +315,7 @@ func (pm *PickleMachine) opcode_LIST() error {
 	}
 
 	//Pop the values off the stack
-	err = pm.popAfterIndex(markIndex)
-	if err != nil {
-		return err
-	}
+	pm.popAfterIndex(markIndex)
 
 	pm.push(v)
 	return nil
@@ -376,10 +373,8 @@ func (pm *PickleMachine) opcode_DICT() error {
 	if key != nil {
 		return fmt.Errorf("For opcode DICT stack after mark contained an odd number of items, this is not valid")
 	}
-	err = pm.popAfterIndex(markIndex)
-	if err != nil {
-		return err
-	}
+	pm.popAfterIndex(markIndex)
+
 	pm.push(v)
 	return nil
 }
@@ -521,7 +516,7 @@ func (pm *PickleMachine) opcode_PUT() error {
 		return err
 	}
 
-	pm.putMemo(idx, pm.Stack[len(pm.Stack)-1])
+	pm.storeMemo(int64(idx), pm.Stack[len(pm.Stack)-1])
 
 	return nil
 }

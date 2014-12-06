@@ -221,10 +221,12 @@ func (pm *PickleMachine) opcode_APPENDS() error {
 	}
 
 	pyList = append(pyList, pm.Stack[markIndex+1:]...)
-	err = pm.popAfterIndex(markIndex - 1)
+	pm.popAfterIndex(markIndex - 1)
+
+	/**
 	if err != nil {
 		return err
-	}
+	}**/
 
 	pm.push(pyList)
 	return nil
@@ -283,11 +285,11 @@ func (pm *PickleMachine) opcode_SETITEMS() error {
 
 	v, ok := vI.(map[interface{}]interface{})
 	if !ok {
-		return fmt.Errorf("Opcode DICT expected type %T on stack but found %v(%T)", v, vI, vI)
+		return fmt.Errorf("Opcode SETITEMS expected type %T on stack but found %v(%T)", v, vI, vI)
 	}
 
 	if ((len(pm.Stack) - markIndex + 1) % 2) != 0 {
-		return fmt.Errorf("Found odd number of items on stack after mark:%d", len(pm.Stack)-markIndex)
+		return fmt.Errorf("Found odd number of items on stack after mark:%d", len(pm.Stack)-markIndex+1)
 	}
 
 	for i := markIndex + 1; i != len(pm.Stack); i++ {
@@ -296,10 +298,11 @@ func (pm *PickleMachine) opcode_SETITEMS() error {
 		v[key] = pm.Stack[i]
 	}
 
-	err = pm.popAfterIndex(markIndex)
+	pm.popAfterIndex(markIndex)
+	/**
 	if err != nil {
 		return err
-	}
+	}**/
 
 	return nil
 }
@@ -320,8 +323,8 @@ func (pm *PickleMachine) opcode_POP_MARK() error {
 	if err != nil {
 		return nil
 	}
-	err = pm.popAfterIndex(markIndex)
-	return err
+	pm.popAfterIndex(markIndex)
+	return nil
 }
 
 /**

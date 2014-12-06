@@ -315,7 +315,7 @@ func (pm *PickleMachine) opcode_PROTO() error {
 		return err
 	}
 	if version != 2 {
-		return fmt.Errorf("Unsupported version #%d detected", pm.currentOpcode)
+		return fmt.Errorf("Unsupported version #%d detected", version)
 	}
 
 	return nil

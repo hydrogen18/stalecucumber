@@ -267,10 +267,12 @@ func Unpickle(reader io.Reader) (interface{}, error) {
 	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
 	pm.lastMark = -1
+	//Pre allocate a small stack
+	pm.Stack = make([]interface{}, 0, 16)
 
 	err := (&pm).execute()
-	if err != nil {
-		return nil, err
+	if err != ErrOpcodeStopped {
+		return nil, pm.error(err)
 	}
 
 	if len(pm.Stack) == 0 {
@@ -309,6 +311,15 @@ type PickleMachine struct {
 	currentOpcode uint8
 	buf           *bytes.Buffer
 	lastMark      int
+
+	memoBuffer               [16]memoBufferElement
+	memoBufferMaxDestination int64
+	memoBufferIndex          int
+}
+
+type memoBufferElement struct {
+	Destination int64
+	V           interface{}
 }
 
 func (pme PickleMachineError) Error() string {
@@ -326,20 +337,45 @@ func (pm *PickleMachine) error(src error) error {
 
 func (pm *PickleMachine) execute() error {
 	for {
-		var opcode uint8
-		err := binary.Read(pm.Reader, binary.BigEndian, &opcode)
+		err := binary.Read(pm.Reader, binary.BigEndian, &pm.currentOpcode)
 		if err != nil {
 			return err
 		}
 
-		pm.currentOpcode = opcode
-		err = jumpList[int(opcode)](pm)
-		if err == ErrOpcodeStopped {
-			return nil
-		} else if err != nil {
-			return pm.error(err)
+		err = jumpList[int(pm.currentOpcode)](pm)
+
+		if err != nil {
+			return err
 		}
 	}
+}
+
+func (pm *PickleMachine) flushMemoBuffer(vIndex int64, v interface{}) {
+	//Extend the memo until it is large enough
+	if pm.memoBufferMaxDestination >= int64(len(pm.Memo)) {
+		replacement := make([]interface{}, pm.memoBufferMaxDestination<<1)
+		copy(replacement, pm.Memo)
+		pm.Memo = replacement
+	}
+
+	//If a value was passed into this function, write it into the memo
+	//as well
+	if vIndex != -1 {
+		pm.Memo[vIndex] = v
+	}
+
+	//Write the contents of the buffer into the memo
+	//in the same order as the puts were issued
+	for i := 0; i != pm.memoBufferIndex; i++ {
+		buffered := pm.memoBuffer[i]
+		pm.Memo[buffered.Destination] = buffered.V
+	}
+
+	//Reset the buffer
+	pm.memoBufferIndex = 0
+	pm.memoBufferMaxDestination = 0
+
+	return
 }
 
 func (pm *PickleMachine) storeMemo(index int64, v interface{}) error {
@@ -347,23 +383,60 @@ func (pm *PickleMachine) storeMemo(index int64, v interface{}) error {
 		return fmt.Errorf("Requested to write to invalid memo index:%v", index)
 	}
 
-	if int64(len(pm.Memo)) <= index {
-		replacement := make([]interface{}, index+1)
-		copy(replacement, pm.Memo)
-		pm.Memo = replacement
+	//If there is space in the memo presently, then store it
+	//and it is done.
+	if index < int64(len(pm.Memo)) {
+		pm.Memo[index] = v
+		return nil
 	}
 
-	pm.Memo[index] = v
+	//Update the maximum index in the buffer if need be
+	if index > pm.memoBufferMaxDestination {
+		pm.memoBufferMaxDestination = index
+	}
+
+	//If the buffer is not full write into it
+	if pm.memoBufferIndex != len(pm.memoBuffer) {
+		pm.memoBuffer[pm.memoBufferIndex].V = v
+		pm.memoBuffer[pm.memoBufferIndex].Destination = index
+		pm.memoBufferIndex++
+	} else {
+		//If the buffer is full flush it now
+		pm.flushMemoBuffer(index, v)
+	}
 
 	return nil
 }
 
 func (pm *PickleMachine) readFromMemo(index int64) (interface{}, error) {
-	if index < 0 || index >= int64(len(pm.Memo)) {
-		return nil, fmt.Errorf("Requested to read from invalid memo index %d", index)
+	if index < 0 {
+		return nil, fmt.Errorf("Requested to read from negative memo index %d", index)
+
 	}
 
-	return pm.Memo[index], nil
+	//Test to see if the value is outside the current length of the memo
+	if index >= int64(len(pm.Memo)) {
+		pm.flushMemoBuffer(-1, nil)
+		if index >= int64(len(pm.Memo)) {
+			return nil, fmt.Errorf("Requested to read from invalid memo index %d", index)
+		}
+	}
+
+	//Grab the value
+	retval := pm.Memo[index]
+
+	//If nil then flush the memo buffer to see if it is within it
+	if retval == nil {
+		pm.flushMemoBuffer(-1, nil)
+		//Grab the value again after the flush
+		retval = pm.Memo[index]
+		//If still nil, then this is a read from an invalid position
+		if retval == nil {
+			return nil, fmt.Errorf("Requested to read from invalid memo index %d", index)
+		}
+	}
+
+	return retval, nil
 }
 
 func (pm *PickleMachine) push(v interface{}) {
@@ -371,14 +444,14 @@ func (pm *PickleMachine) push(v interface{}) {
 }
 
 func (pm *PickleMachine) pop() (interface{}, error) {
-	if len(pm.Stack) == 0 {
+	l := len(pm.Stack)
+	if l == 0 {
 		return nil, ErrStackTooSmall
 	}
 
-	lastIndex := len(pm.Stack) - 1
-	top := pm.Stack[lastIndex]
-
-	pm.Stack = pm.Stack[:lastIndex]
+	l--
+	top := pm.Stack[l]
+	pm.Stack = pm.Stack[:l]
 	return top, nil
 }
 
@@ -410,21 +483,15 @@ func (pm *PickleMachine) readIntFromStack(offset int) (int64, error) {
 	return vi, nil
 }
 
-func (pm *PickleMachine) popAfterIndex(index int) error {
+func (pm *PickleMachine) popAfterIndex(index int) {
+	//Input to this function must be sane, no checking is done
+
+	/**
 	if len(pm.Stack)-1 < index {
 		return ErrStackTooSmall
-	}
+	}**/
 
 	pm.Stack = pm.Stack[0:index]
-	return nil
-}
-
-func (pm *PickleMachine) putMemo(index int, v interface{}) {
-	for len(pm.Memo) <= index {
-		pm.Memo = append(pm.Memo, nil)
-	}
-
-	pm.Memo[index] = v
 }
 
 func (pm *PickleMachine) findMark() (int, error) {
@@ -473,6 +540,7 @@ func (pm *PickleMachine) readFixedLengthString(l int64) (string, error) {
 }
 
 func (pm *PickleMachine) readBytes() ([]byte, error) {
+	//This is slow and protocol 0 only
 	pm.buf.Reset()
 	for {
 		var v [1]byte
@@ -490,15 +558,11 @@ func (pm *PickleMachine) readBytes() ([]byte, error) {
 		pm.buf.WriteByte(v[0])
 	}
 
-	//Avoid getting "<nil>"
-	if pm.buf.Len() == 0 {
-		return []byte{}, nil
-	}
 	return pm.buf.Bytes(), nil
-
 }
 
 func (pm *PickleMachine) readString() (string, error) {
+	//This is slow and protocol 0 only
 	pm.buf.Reset()
 	for {
 		var v [1]byte
