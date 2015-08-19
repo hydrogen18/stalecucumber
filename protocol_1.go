@@ -276,7 +276,6 @@ Stack after: [dict]
 func (pm *PickleMachine) opcode_SETITEMS() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// find out exactly what the error was and set err
 			switch x := r.(type) {
 			case string:
 				err = errors.New(x)
@@ -285,7 +284,6 @@ func (pm *PickleMachine) opcode_SETITEMS() (err error) {
 			default:
 				err = errors.New("Unknown panic")
 			}
-			// return the modified err
 		}
 	}()
 	markIndex, err := pm.findMark()
@@ -348,9 +346,21 @@ Read an object from the memo and push it on the stack.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_BINGET() error {
+func (pm *PickleMachine) opcode_BINGET() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	var index uint8
-	err := pm.readBinaryInto(&index, false)
+	err = pm.readBinaryInto(&index, false)
 	if err != nil {
 		return err
 	}
@@ -377,9 +387,21 @@ Read an object from the memo and push it on the stack.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_LONG_BINGET() error {
+func (pm *PickleMachine) opcode_LONG_BINGET() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	var index int32
-	err := pm.readBinaryInto(&index, false)
+	err = pm.readBinaryInto(&index, false)
 	if err != nil {
 		return err
 	}
