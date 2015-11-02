@@ -3,6 +3,7 @@ package stalecucumber
 import "strconv"
 import "fmt"
 import "math/big"
+import "errors"
 
 //import "unicode/utf8"
 import "unicode/utf16"
@@ -354,7 +355,19 @@ Build a dict out of the topmost stack slice, after markobject.
 Stack before: [mark, stackslice]
 Stack after: [dict]
 **/
-func (pm *PickleMachine) opcode_DICT() error {
+func (pm *PickleMachine) opcode_DICT() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	markIndex, err := pm.findMark()
 	if err != nil {
 		return err
@@ -391,7 +404,19 @@ Add a key+value pair to an existing dict.
 Stack before: [dict, any, any]
 Stack after: [dict]
 **/
-func (pm *PickleMachine) opcode_SETITEM() error {
+func (pm *PickleMachine) opcode_SETITEM() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	v, err := pm.pop()
 	if err != nil {
 		return err

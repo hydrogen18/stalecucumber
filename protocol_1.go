@@ -1,6 +1,7 @@
 package stalecucumber
 
 import "fmt"
+import "errors"
 
 /**
 Opcode: BININT (0x4a)
@@ -272,7 +273,19 @@ Add an arbitrary number of key+value pairs to an existing dict.
 Stack before: [dict, mark, stackslice]
 Stack after: [dict]
 **/
-func (pm *PickleMachine) opcode_SETITEMS() error {
+func (pm *PickleMachine) opcode_SETITEMS() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	markIndex, err := pm.findMark()
 	if err != nil {
 		return err
@@ -333,9 +346,21 @@ Read an object from the memo and push it on the stack.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_BINGET() error {
+func (pm *PickleMachine) opcode_BINGET() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	var index uint8
-	err := pm.readBinaryInto(&index, false)
+	err = pm.readBinaryInto(&index, false)
 	if err != nil {
 		return err
 	}
@@ -362,9 +387,21 @@ Read an object from the memo and push it on the stack.
 Stack before: []
 Stack after: [any]
 **/
-func (pm *PickleMachine) opcode_LONG_BINGET() error {
+func (pm *PickleMachine) opcode_LONG_BINGET() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 	var index int32
-	err := pm.readBinaryInto(&index, false)
+	err = pm.readBinaryInto(&index, false)
 	if err != nil {
 		return err
 	}
