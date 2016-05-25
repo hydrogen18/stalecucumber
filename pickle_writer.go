@@ -379,7 +379,7 @@ func (proxy bigIntProxy) WriteTo(w io.Writer) (int, error) {
 
 	var pad []byte
 	var padL int
-	var highBitSet = (raw[0] & 0x80) != 0
+	var highBitSet = (len(raw) > 0 && raw[0] & 0x80 == 0x80)
 
 	if negative && !highBitSet {
 		pad = maxPad
