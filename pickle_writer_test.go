@@ -314,6 +314,9 @@ func TestPickleBigInt(t *testing.T) {
 
 	i.Mul(i, big.NewInt(-1))
 	roundTrip(i, t)
+
+	i = big.NewInt(0)
+	roundTrip(i, t)
 }
 
 func TestPickleTuple(t *testing.T) {
