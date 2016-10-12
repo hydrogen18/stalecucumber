@@ -363,14 +363,14 @@ func inAndUnpack(v interface{}, t *testing.T) {
 	}
 
 	w := reflect.New(reflect.TypeOf(v))
-	err = UnpackInto(w.Interface()).From(Unpickle(buf))
+	err = UnpackInto(w.Interface()).From(Unpickle(bytes.NewReader(buf.Bytes())))
 	if err != nil {
 		t.Fatalf("Failed unpickling %T:%v", w, err)
 	}
 
 	wi := reflect.Indirect(w).Interface()
 	if !reflect.DeepEqual(v, wi) {
-		t.Fatalf("\n---EXPECTED:(%T)\n%v\n---GOT:(%T)\n%v", v, v, wi, wi)
+		t.Fatalf("\nFrom:%x\n---EXPECTED:(%T)\n%v\n---GOT:(%T)\n%v", buf.Bytes(), v, v, wi, wi)
 	}
 
 }
