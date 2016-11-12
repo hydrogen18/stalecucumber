@@ -129,7 +129,7 @@ func TestPickleUint64(t *testing.T) {
 	inAndOut(i, bi, t)
 
 	var ui uint
-	ui = 18446744073709551615
+	ui = ^uint(0)
 	bi.SetUint64(uint64(ui))
 	inAndOut(ui, bi, t)
 }
