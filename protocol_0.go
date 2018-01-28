@@ -1,12 +1,12 @@
 package stalecucumber
 
-import "strconv"
-import "fmt"
-import "math/big"
-import "errors"
-
-//import "unicode/utf8"
-import "unicode/utf16"
+import (
+	"errors"
+	"fmt"
+	"math/big"
+	"strconv"
+	"unicode/utf16"
+) //import "unicode/utf8"
 
 /**
 Opcode: INT
@@ -560,6 +560,21 @@ Stack before: []
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_GLOBAL() error {
+	str1, err := pm.readString()
+	if err != nil {
+		return err
+	}
+
+	str2, err := pm.readString()
+	if err != nil {
+		return err
+	}
+
+	if str1 == "__builtin__" && str2 == "set" {
+		pm.push("set")
+		return nil
+	}
+
 	//TODO push an object that represents the result of this operation
 	return ErrOpcodeNotImplemented
 }
@@ -592,8 +607,51 @@ Stack before: [any, any]
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_REDUCE() error {
-	//TODO push an object that represents the result result of this operation
+	obj, err := pm.pop()
+	if err != nil {
+		return err
+	}
+	funcName, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	funcNameVal, ok := funcName.(string)
+	if !ok {
+		return ErrOpcodeNotImplemented
+	}
+
+	if funcNameVal == "set" {
+		return pm.unpickleSet(obj)
+	}
+
+	//TODO push an object that represents the result of this operation
 	return ErrOpcodeNotImplemented
+}
+
+func (pm *PickleMachine) unpickleSet(obj interface{}) error {
+	list, ok := obj.([]interface{})
+	if !ok {
+		return ErrOpcodeNotImplemented
+	}
+
+	if len(list) != 1 {
+		return ErrOpcodeNotImplemented
+	}
+
+	tuple, ok := list[0].([]interface{})
+	if !ok {
+		return ErrOpcodeNotImplemented
+	}
+
+	set := make(map[interface{}]bool, len(tuple))
+	for _, item := range tuple {
+		set[item] = true
+	}
+
+	pm.push(set)
+
+	return nil
 }
 
 /**
