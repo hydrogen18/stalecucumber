@@ -1,12 +1,14 @@
 package stalecucumber
 
-import "testing"
-import "strings"
-import "math/big"
-import "reflect"
-import "fmt"
-import "bytes"
-import "unicode/utf8"
+import (
+	"bytes"
+	"fmt"
+	"math/big"
+	"reflect"
+	"strings"
+	"testing"
+	"unicode/utf8"
+)
 
 func testString(t *testing.T, input string, expect string) {
 	reader := strings.NewReader(input)
@@ -226,6 +228,27 @@ func TestProtocol0Dict(t *testing.T) {
 		testDict(t, "(dp0\nS'list'\np1\n(lp2\nI1\naI2\naI3\naI4\nasS'foo'\np3\nS'bar'\np4\nsS'num'\np5\nF13.37\nsI5\nS'kitty'\np6\ns.", expect)
 	}
 
+}
+
+func TestProtocol0Set(t *testing.T) {
+	// pickle.dumps(set(['a','b']))
+	reader := strings.NewReader("c__builtin__\nset\np0\n((lp1\nS'a'\np2\naS'b'\np3\natp4\nRp5\n.")
+	result, err := Set(Unpickle(reader))
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Got unexpected item count in set, result %v != expectation %v", len(result), 2)
+	}
+
+	if !result["a"] {
+		t.Errorf("Expected item 'a' in set")
+	}
+
+	if !result["b"] {
+		t.Errorf("Expected item 'b' in set")
+	}
 }
 
 func TestProtocol1Dict(t *testing.T) {
