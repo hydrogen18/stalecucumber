@@ -267,6 +267,7 @@ func Unpickle(reader io.Reader) (interface{}, error) {
 	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
 	pm.lastMark = -1
+	pm.GlobalResolver = PythonBuiltinResolver{} 
 	//Pre allocate a small stack
 	pm.Stack = make([]interface{}, 0, 16)
 
@@ -307,6 +308,7 @@ type PickleMachine struct {
 	Stack  []interface{}
 	Memo   []interface{}
 	Reader io.Reader
+	GlobalResolver PythonResolver
 
 	currentOpcode uint8
 	buf           *bytes.Buffer

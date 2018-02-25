@@ -251,6 +251,78 @@ func TestProtocol0Set(t *testing.T) {
 	}
 }
 
+func TestProtocol1Set(t *testing.T) {
+	// pickle.dumps(set(['a','b']))
+	reader := strings.NewReader("c__builtin__\nset\nq\x00(]q\x01(U\x01aq\x02U\x01bq\x03etq\x04Rq\x05.")
+	result, err := Set(Unpickle(reader))
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Got unexpected item count in set, result %v != expectation %v", len(result), 2)
+	}
+
+	if !result["a"] {
+		t.Errorf("Expected item 'a' in set")
+	}
+
+	if !result["b"] {
+		t.Errorf("Expected item 'b' in set") 
+	}
+}
+
+func TestProtocol2Set(t *testing.T) {
+	// pickle.dumps(set(['a','b']))
+	reader := strings.NewReader("\x80\x02c__builtin__\nset\nq\x00]q\x01(U\x01aq\x02U\x01bq\x03e\x85q\x04Rq\x05.")
+	result, err := Set(Unpickle(reader))
+	if err != nil {
+		t.Fatalf("Got error %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Got unexpected item count in set, result %v != expectation %v", len(result), 2)
+	}
+
+	if !result["a"] {
+		t.Errorf("Expected item 'a' in set")
+	}
+
+	if !result["b"] {
+		t.Errorf("Expected item 'b' in set")
+	}
+}
+
+func TestProtocol0GarbageReduce(t *testing.T){
+	reader := strings.NewReader("S'foo'\nS'bar'\nR.")
+	/**
+	Disassembly of the above is this
+	0: S    STRING     'foo'
+	7: S    STRING     'bar'
+ 14: R    REDUCE
+ 15: .    STOP
+ **/
+
+ result, err := Unpickle(reader)
+ if err == nil {
+	 t.Error("Expected an error")
+ }
+
+ if result != nil {
+	 t.Errorf("Expected result to be nil but got %v", result)
+ }
+
+
+ // Unpack the generic error type to get the actual one
+ err = (err.(PickleMachineError)).Err
+
+ if expectedErr, ok := err.(UnreducibleValueError); !ok {
+	 t.Errorf("Expected error of type %T but got %T %v", expectedErr, err, err)
+ }
+
+
+}
+
 func TestProtocol1Dict(t *testing.T) {
 	testDict(t, "}q\x00.", make(map[interface{}]interface{}))
 	{

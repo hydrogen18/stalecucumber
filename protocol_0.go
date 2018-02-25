@@ -570,13 +570,23 @@ func (pm *PickleMachine) opcode_GLOBAL() error {
 		return err
 	}
 
-	if str1 == "__builtin__" && str2 == "set" {
-		pm.push("set")
+	// Push a sentinel object representing the type
+	if str1 == "__builtin__" && str2 == "set" { 
+		pm.push(globalSentinel{Package: str1, Name: str2})
+		
 		return nil
 	}
 
 	//TODO push an object that represents the result of this operation
 	return ErrOpcodeNotImplemented
+}
+
+type UnreducibleValueError struct{
+	Value interface{}
+}
+
+func (this UnreducibleValueError) Error() string{
+	return fmt.Sprintf("Cannot reduce (%T) %v", this.Value, this.Value)
 }
 
 /**
@@ -616,41 +626,18 @@ func (pm *PickleMachine) opcode_REDUCE() error {
 		return err
 	}
 
-	funcNameVal, ok := funcName.(string)
-	if !ok {
-		return ErrOpcodeNotImplemented
+	// Sentinel should have been placed on the stack by the opcode_GLOBAL function
+	sentinel, ok := funcName.(globalSentinel)
+	if !ok {	
+		return UnreducibleValueError{Value: funcName}
 	}
 
-	if funcNameVal == "set" {
-		return pm.unpickleSet(obj)
-	}
-
-	//TODO push an object that represents the result of this operation
-	return ErrOpcodeNotImplemented
-}
-
-func (pm *PickleMachine) unpickleSet(obj interface{}) error {
-	list, ok := obj.([]interface{})
-	if !ok {
-		return ErrOpcodeNotImplemented
-	}
-
-	if len(list) != 1 {
-		return ErrOpcodeNotImplemented
-	}
-
-	tuple, ok := list[0].([]interface{})
-	if !ok {
-		return ErrOpcodeNotImplemented
-	}
-
-	set := make(map[interface{}]bool, len(tuple))
-	for _, item := range tuple {
-		set[item] = true
-	}
-
-	pm.push(set)
-
+	result, err := pm.GlobalResolver.Resolve(sentinel.Package, sentinel.Name, obj)
+	if err != nil {
+		return err
+	} 
+	
+	pm.push(result)
 	return nil
 }
 
