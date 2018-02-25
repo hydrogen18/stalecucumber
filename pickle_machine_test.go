@@ -1,6 +1,7 @@
 package stalecucumber
 
 import (
+	"io"
 	"bytes"
 	"fmt"
 	"math/big"
@@ -296,7 +297,7 @@ func TestProtocol2Set(t *testing.T) {
 func TestProtocol0GarbageReduce(t *testing.T){
 	reader := strings.NewReader("S'foo'\nS'bar'\nR.")
 	/**
-	Disassembly of the above is this
+	Disassembly of the above is this garbage
 	0: S    STRING     'foo'
 	7: S    STRING     'bar'
  14: R    REDUCE
@@ -311,7 +312,6 @@ func TestProtocol0GarbageReduce(t *testing.T){
  if result != nil {
 	 t.Errorf("Expected result to be nil but got %v", result)
  }
-
 
  // Unpack the generic error type to get the actual one
  err = (err.(PickleMachineError)).Err
@@ -332,6 +332,23 @@ func TestProtocol0Bytearray(t *testing.T){
 	if result == nil {
 		t.Error("Expected result value but got nil")
 	}
+
+	buffer, ok := result.(*strings.Reader)	
+	if !ok{
+		t.Errorf("Expected byte buffer but got %T", result)
+	}
+
+	const expected = `abc123`
+	actual := bytes.NewBuffer(nil)
+	_, err = io.Copy(actual, buffer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	
+	if actual.String() != expected {
+		t.Errorf("Expected %q but got %q", expected, actual.String())
+	}
+
 }
 
 func TestProtocol1Dict(t *testing.T) {

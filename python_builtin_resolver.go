@@ -2,7 +2,7 @@ package stalecucumber
 
 import "fmt"
 import "errors"
-import "bytes"
+import "strings"
 
 // A type to convert to a GLOBAL opcode to something meaningful in golang
 type PythonResolver interface {
@@ -93,6 +93,6 @@ func (this PythonBuiltinResolver) handlePythonByteArray(args []interface{}) (int
 			Message: "Expected first arg to be a string",
 		}
 	}
-	return bytes.NewBufferString(value), nil
+	return strings.NewReader(value), nil
 }
  

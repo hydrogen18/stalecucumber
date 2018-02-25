@@ -1,10 +1,12 @@
 package stalecucumber
 
+import "io"
 import "testing"
 import "strings"
 import "reflect"
 import "math/big"
 import "github.com/hydrogen18/stalecucumber/struct_export_test"
+import "bytes"
 
 func BenchmarkUnpickleInt(b *testing.B) {
 	const protocol2Int = "\x80\x02K*."
@@ -696,3 +698,81 @@ func TestUnpackIntInStructIntoBigInt(t *testing.T) {
 		t.Fatal(dst.V)
 	}
 }
+
+func TestUnpackByteArrayIntoByteBuffer(t *testing.T){
+	var dst *bytes.Buffer
+
+	const input = "c__builtin__\nbytearray\np0\n(Vabc123\np1\nS'latin-1'\np2\ntp3\nRp4\n."
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const magic = `abc123`
+	if dst == nil || dst.String() != magic {
+		t.Fatal(dst)
+	}
+}
+
+func TestUnpackByteArrayIntoReader(t *testing.T){
+	var dst io.Reader
+
+	const input = "c__builtin__\nbytearray\np0\n(Vabc123\np1\nS'latin-1'\np2\ntp3\nRp4\n."
+
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const magic = `abc123`
+	
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.String() != magic {
+		t.Fatal("did not get magic value back")
+	}
+}
+
+func TestUnpackByteArrayAsPartOfMap(t *testing.T){
+	var dst map[interface{}]interface{}
+
+	const input = "(dp0\nS'a'\np1\nc__builtin__\nbytearray\np2\n(Vabc123\np3\nS'latin-1'\np4\ntp5\nRp6\ns."
+	err := UnpackInto(&dst).From(Unpickle(strings.NewReader(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const magic = `abc123`
+	if dst == nil {
+		t.Fatal("dst is nil")
+	}
+
+	val, ok := dst["a"]
+	if !ok {
+		t.Fatal("dst does not contain key")
+	}
+
+	valReader, ok := val.(io.Reader)
+	if !ok {
+		t.Fatal("value is not a reader")
+	}
+
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, valReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.String() != magic {
+		t.Fatal("did not get magic value back")
+	}
+}
+
+
+
+ 
