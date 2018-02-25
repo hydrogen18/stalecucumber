@@ -319,8 +319,19 @@ func TestProtocol0GarbageReduce(t *testing.T){
  if expectedErr, ok := err.(UnreducibleValueError); !ok {
 	 t.Errorf("Expected error of type %T but got %T %v", expectedErr, err, err)
  }
+}
 
+func TestProtocol0Bytearray(t *testing.T){
+	reader := strings.NewReader("c__builtin__\nbytearray\np0\n(Vabc123\np1\nS'latin-1'\np2\ntp3\nRp4\n.")
 
+	result, err := Unpickle(reader)
+	if err != nil{
+		t.Errorf("Expected no error but got %v", err)
+	}
+
+	if result == nil {
+		t.Error("Expected result value but got nil")
+	}
 }
 
 func TestProtocol1Dict(t *testing.T) {

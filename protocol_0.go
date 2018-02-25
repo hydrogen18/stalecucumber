@@ -570,15 +570,9 @@ func (pm *PickleMachine) opcode_GLOBAL() error {
 		return err
 	}
 
-	// Push a sentinel object representing the type
-	if str1 == "__builtin__" && str2 == "set" { 
-		pm.push(globalSentinel{Package: str1, Name: str2})
-		
-		return nil
-	}
-
-	//TODO push an object that represents the result of this operation
-	return ErrOpcodeNotImplemented
+	// Push a sentinel object representing the type	
+	pm.push(globalSentinel{Package: str1, Name: str2})
+	return nil
 }
 
 type UnreducibleValueError struct{
@@ -632,7 +626,13 @@ func (pm *PickleMachine) opcode_REDUCE() error {
 		return UnreducibleValueError{Value: funcName}
 	}
 
-	result, err := pm.GlobalResolver.Resolve(sentinel.Package, sentinel.Name, obj)
+	// Python docs say tuple on the stack, so should always be a slice here in Golang
+	args, ok := obj.([]interface{})
+	if !ok {
+		return UnreducibleValueError{Value: obj}
+	}
+
+	result, err := pm.GlobalResolver.Resolve(sentinel.Package, sentinel.Name, args)
 	if err != nil {
 		return err
 	} 

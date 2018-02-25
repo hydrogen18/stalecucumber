@@ -2,10 +2,11 @@ package stalecucumber
 
 import "fmt"
 import "errors"
+import "bytes"
 
 // A type to convert to a GLOBAL opcode to something meaningful in golang
 type PythonResolver interface {
-	Resolve(module string, name string, args interface{}) (interface{}, error)
+	Resolve(module string, name string, args []interface{}) (interface{}, error)
 }
 
 var ErrUnresolvablePythonGlobal = errors.New("Unresolvable Python global value")
@@ -20,7 +21,9 @@ func(this UnparseablePythonGlobalError) Error() string {
 
 type PythonBuiltinResolver struct {}
 
-func (this PythonBuiltinResolver) Resolve(module string, name string, args interface{}) (interface{}, error) {
+func (this PythonBuiltinResolver) Resolve(module string, name string, args []interface{}) (interface{}, error) {
+	// Up to version 2 this is always "__builtin__"
+	// In version 3+ it becomes "builtin" but that is not supported yet
 	if module != "__builtin__" {
 		return nil, ErrUnresolvablePythonGlobal
 	}
@@ -29,26 +32,24 @@ func (this PythonBuiltinResolver) Resolve(module string, name string, args inter
 		return this.handlePythonSet(args)
 	}
 
+	if name == "bytearray" {
+		return this.handlePythonByteArray(args)
+	}
+
+
 	return nil, ErrUnresolvablePythonGlobal
 }
 
-func (this PythonBuiltinResolver) handlePythonSet(args interface{}) (interface{}, error){
-	list, ok := args.([]interface{})
-	if !ok {
-		return nil, UnparseablePythonGlobalError{
-			Args: args, 
-			Message: fmt.Sprintf("Expected args to be of type %T", list),
-		}
-	}
-
-	if len(list) != 1 {
+func (this PythonBuiltinResolver) handlePythonSet(args []interface{}) (interface{}, error){
+	
+	if len(args) != 1 {
 		return nil, UnparseablePythonGlobalError{
 			Args: args, 
 			Message: "Expected args to be of length 1",
 		}
 	}
 
-	tuple, ok := list[0].([]interface{})
+	tuple, ok := args[0].([]interface{})
 	if !ok {
 		return nil, UnparseablePythonGlobalError{
 			Args: args, 
@@ -63,5 +64,35 @@ func (this PythonBuiltinResolver) handlePythonSet(args interface{}) (interface{}
 	}
 
 	return set, nil
+}
+
+func (this PythonBuiltinResolver) handlePythonByteArray(args []interface{}) (interface{}, error){	
+	// Up to version 2 the implementation of bytearray always pickles as a tuple like
+	// (theStringValue, 'latin-1', )
+	// version 3+ of pickle is different but we're not supporting that presently
+	if len(args) != 2{
+		return nil, UnparseablePythonGlobalError{
+			Args: args,
+			Message: "Expected args to be of length 2",
+		}
+	}
+
+	const magic = `latin-1`
+	magicValue, ok := args[1].(string)
+	if !ok || magicValue != magic{
+		return nil, UnparseablePythonGlobalError{
+			Args: args,
+			Message: fmt.Sprintf("Expected second arg to be string %q", magic),
+		}
+	}
+
+	value, ok := args[0].(string)
+	if !ok {
+		return nil, UnparseablePythonGlobalError{
+			Args: args,
+			Message: "Expected first arg to be a string",
+		}
+	}
+	return bytes.NewBufferString(value), nil
 }
  
