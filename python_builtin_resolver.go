@@ -1,15 +1,8 @@
 package stalecucumber
 
 import "fmt"
-import "errors"
 import "strings"
 
-// A type to convert to a GLOBAL opcode to something meaningful in golang
-type PythonResolver interface {
-	Resolve(module string, name string, args []interface{}) (interface{}, error)
-}
-
-var ErrUnresolvablePythonGlobal = errors.New("Unresolvable Python global value")
 type UnparseablePythonGlobalError struct {
 	Args interface{}
 	Message string

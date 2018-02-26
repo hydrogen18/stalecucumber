@@ -584,3 +584,38 @@ func TestProtocol2Tuples(t *testing.T) {
 	testList(t, "\x80\x02U\x05kittyq\x00K7G@*\xbdp\xa3\xd7\n=\x87q\x01.", []interface{}{"kitty", int64(55), 13.37})
 
 }
+
+type customResolver struct{
+	called bool
+}
+
+func (this *customResolver) Resolve(module string, name string, args []interface{}) (interface{}, error){
+	this.called = true
+	return nil, ErrUnresolvablePythonGlobal
+}
+
+func TestCustomResolver(t *testing.T){
+	reader := strings.NewReader("c__builtin__\nset\np0\n((lp1\nS'a'\np2\naS'b'\np3\natp4\nRp5\n.")
+	var resolver customResolver
+	_, err := UnpickleWithResolver(reader, &resolver)
+	if err == nil {
+		t.Fatal("Should have failed")
+	}
+
+	if !resolver.called {
+		t.Fatal("resolver should have been called")
+	}	
+}
+
+func TestChainedResolver(t *testing.T){
+	reader := strings.NewReader("c__builtin__\nset\np0\n((lp1\nS'a'\np2\naS'b'\np3\natp4\nRp5\n.")
+	var resolver customResolver
+	_, err := UnpickleWithResolver(reader, MakePythonResolverChain(&resolver, PythonBuiltinResolver{}))
+	if err != nil {
+		t.Fatalf("Should not have failed but got %v", err)
+	}
+
+	if !resolver.called {
+		t.Fatal("resolver should have been called")
+	}	
+}

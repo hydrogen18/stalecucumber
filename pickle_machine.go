@@ -263,11 +263,19 @@ From.
 
 */
 func Unpickle(reader io.Reader) (interface{}, error) {
+	return UnpickleWithResolver(reader, nil)
+}
+
+func UnpickleWithResolver(reader io.Reader, resolver PythonResolver) (interface{}, error){
 	var pm PickleMachine
 	pm.buf = &bytes.Buffer{}
 	pm.Reader = reader
 	pm.lastMark = -1
-	pm.GlobalResolver = PythonBuiltinResolver{} 
+	if resolver == nil {
+		pm.GlobalResolver = PythonBuiltinResolver{} 
+	} else {
+		pm.GlobalResolver = resolver
+	}
 	//Pre allocate a small stack
 	pm.Stack = make([]interface{}, 0, 16)
 
@@ -281,7 +289,6 @@ func Unpickle(reader io.Reader) (interface{}, error) {
 	}
 
 	return pm.Stack[0], nil
-
 }
 
 var jumpList = buildEmptyJumpList()
