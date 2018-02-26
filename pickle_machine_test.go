@@ -619,3 +619,52 @@ func TestChainedResolver(t *testing.T){
 		t.Fatal("resolver should have been called")
 	}	
 }
+
+type passThroughResolver int
+func (passThroughResolver) Resolve(module string, name string, args []interface{}) (interface{}, error){
+	return args, nil
+}
+
+func TestProtocol0InstAndBuild(t *testing.T){
+	reader := strings.NewReader("(i__main__\nFoo\np0\n(dp1\nS'qux'\np2\nI5\nsS'bar'\np3\nS'foo'\np4\nsb.")
+	var resolver passThroughResolver
+	result, err := UnpickleWithResolver(reader, resolver)
+	if err != nil{
+		t.Fatal(err)
+	}
+
+	resultArr, ok := result.([]interface{})
+	if !ok || len(resultArr) != 1{
+		t.Fatalf("expected %T (length 1) but got %v", resultArr, result)
+	}
+
+	objDict, ok := resultArr[0].(map[interface{}]interface{})
+	if !ok {
+		t.Fatalf("Expected %T but got %v", objDict, resultArr)
+	} 
+
+	quxI, ok := objDict["qux"]
+
+	if !ok {
+		t.Fatal("did not get qux")
+	}
+
+	const expectedQux = 5
+	qux, ok := quxI.(int64)
+	if !ok || qux != expectedQux {
+		t.Fatalf("Expected %v but got %v", expectedQux, qux)
+	}
+	
+	barI, ok := objDict["bar"]
+
+	if !ok {
+		t.Fatal("did not get bar")
+	}
+
+	const expectedBar = "foo"
+	bar, ok := barI.(string)
+
+	if !ok || bar != expectedBar {
+		t.Fatalf("Expected %v but got %v", expectedBar, bar)
+	}
+}

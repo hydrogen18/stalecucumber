@@ -632,7 +632,7 @@ func (pm *PickleMachine) opcode_REDUCE() error {
 		return UnreducibleValueError{Value: obj}
 	}
 
-	result, err := pm.GlobalResolver.Resolve(sentinel.Package, sentinel.Name, args)
+	result, err := pm.resolver.Resolve(sentinel.Package, sentinel.Name, args)
 	if err != nil {
 		return err
 	} 
@@ -672,8 +672,43 @@ Stack before: [any, any]
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_BUILD() error {
-	return ErrOpcodeNotImplemented
+	obj, err := pm.pop()
+	if err != nil {
+		return err
+	}
+	funcName, err := pm.pop()
+	if err != nil {
+		return err
+	}
+
+	// Sentinel should have been placed on the stack by the opcode_INST function
+	sentinel, ok := funcName.(instanceSentinel)
+	if !ok {	
+		return UnbuildableValueError{Value: funcName}
+	}
+
+	args := append(sentinel.Args, obj)
+	if !ok {
+		return UnbuildableValueError{Value: funcName}
+	}
+
+	result, err := pm.resolver.Resolve(sentinel.Package, sentinel.Name, args)
+	if err != nil {
+		return err
+	} 
+	
+	pm.push(result)
+	return nil
 }
+
+type UnbuildableValueError struct{
+	Value interface{}
+}
+
+func (this UnbuildableValueError) Error() string{
+	return fmt.Sprintf("Cannot build (%T) %v", this.Value, this.Value)
+}
+
 
 /**
 Opcode: INST
@@ -730,7 +765,37 @@ Stack before: [mark, stackslice]
 Stack after: [any]
 **/
 func (pm *PickleMachine) opcode_INST() error {
-	return ErrOpcodeNotImplemented
+	str1, err := pm.readString()
+	if err != nil {
+		return err
+	}
+
+	str2, err := pm.readString()
+	if err != nil {
+		return err
+	} 
+
+	sentinel := instanceSentinel{Package: str1, Name: str2}
+
+	markIndex, err := pm.findMark()
+	
+	if err != nil {
+		return err
+	}
+
+	args := make([]interface{}, 0, 1)
+	for i := markIndex + 1; i != len(pm.Stack); i++ {
+		args = append(args, pm.Stack[i])
+	}
+
+	//Pop the values off the stack
+	pm.popAfterIndex(markIndex)
+
+	sentinel.Args = args
+
+	// Push a sentinel object representing the type	
+	pm.push(sentinel)
+	return nil
 }
 
 /**

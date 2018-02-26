@@ -5,3 +5,9 @@ type globalSentinel struct{
 	Name string
 }
 
+type instanceSentinel struct{
+	Package string 
+	Name string
+	Args []interface{}
+}
+
