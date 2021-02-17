@@ -63,3 +63,13 @@ mystruct := struct{
 
 err := stalecucumber.NewPickler(buf).Pickle(mystruct)
 ```
+
+Pickle a python class using the dict reconstructor
+```
+buf := new(bytes.Buffer)
+obj := stalecucumber.Class{
+    			"my.package.path", "CustomClass",
+ 			stalecucumber.ClassArgs{"foo": "bar", "hello": "world"},
+		}
+err := stalecucumber.NewPickler(buf).Pickle(obj)
+```

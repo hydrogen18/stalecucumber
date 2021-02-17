@@ -17,6 +17,14 @@ type Pickler struct {
 	program []pickleProxy
 }
 
+type ClassArgs map[string]interface{}
+
+type Class struct {
+	Package string 
+	Name string
+	Args ClassArgs
+}
+
 /*
 This type is used to pickle data.Picklers are created
 by calling NewPickler. Each call to Pickle writes a
@@ -242,6 +250,9 @@ func (p *Pickler) dump(input interface{}) error {
 		}
 
 		return nil
+	case Class:
+		p.dumpClass(input)
+		return nil
 	}
 
 	v := reflect.ValueOf(input)
@@ -289,6 +300,15 @@ func (p *Pickler) dump(input interface{}) error {
 	}
 
 	return PicklingError{V: input, Err: ErrTypeNotPickleable}
+}
+
+func (p *Pickler) dumpClass(v Class) error {
+	p.pushGlobal(v.Package, v.Name)
+	p.pushOpcode(OPCODE_EMPTY_TUPLE)
+	p.pushOpcode(OPCODE_NEWOBJ)
+	p.dump(v.Args)
+	p.pushOpcode(OPCODE_BUILD)
+	return nil
 }
 
 func (p *Pickler) dumpBool(v bool) {
@@ -520,4 +540,18 @@ func (proxy stringProxy) WriteTo(w io.Writer) (int, error) {
 
 func (p *Pickler) dumpString(v string) {
 	p.pushProxy(stringProxy(v))
+}
+
+type rawStringProxy string
+
+func (proxy rawStringProxy) WriteTo(w io.Writer) (int, error) {
+	m, err := io.WriteString(w, string(proxy))
+	if err != nil {
+		return 0, err
+	}
+	return m, nil
+}
+
+func (p *Pickler) pushGlobal(module string, class string) {
+	p.pushProxy(rawStringProxy(fmt.Sprintf("%c%s\n%s\n", OPCODE_GLOBAL, module, class)))
 }
